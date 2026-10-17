@@ -18,10 +18,12 @@ header h1 { margin: 0; font-size: 14px; font-weight: 600; white-space: nowrap; }
 .status { margin-left: auto; font-size: 12px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 main { display: flex; gap: 16px; padding: 14px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
 .stage-wrap { display: flex; flex-direction: column; align-items: center; }
-.stage { background: #0a1424; border: 1px solid #1e293b; border-radius: 22px;
+.stage { position: relative; display: grid; background: #0a1424; border: 1px solid #1e293b; border-radius: 22px;
   padding: 8px; box-shadow: 0 18px 50px rgba(0,0,0,.5); }
-canvas { display: block; width: min(336px, calc(100vw - 62px)); height: auto; aspect-ratio: 336 / 480;
-  border-radius: 14px; background: #000; cursor: crosshair; touch-action: none; user-select: none; -webkit-user-select: none; }
+.stage .live, .stage canvas { grid-area: 1 / 1; display: block; width: min(336px, calc(100vw - 62px)); height: auto;
+  aspect-ratio: 336 / 480; border-radius: 14px; }
+.stage .live { background: #000; object-fit: contain; }
+canvas { background: transparent; cursor: crosshair; touch-action: none; user-select: none; -webkit-user-select: none; z-index: 2; }
 .hint { font-size: 11px; color: #64748b; max-width: 340px; line-height: 1.6; margin: 8px 0 0; text-align: center; }
 .ops { width: 340px; max-width: 100%; display: flex; flex-direction: column; gap: 10px; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -50,7 +52,7 @@ button.wide { grid-column: span 2; }
 </header>
 <main>
   <section class="stage-wrap">
-    <div class="stage"><canvas id="cv" width="336" height="480"></canvas></div>
+    <div class="stage"><img id="live" class="live" alt="live"><canvas id="cv" width="336" height="480"></canvas></div>
     <p class="hint">画布上点击 = 点按，拖拽 = 滑动（手势在服务端按 60Hz 回放，不会带动网页滚动）；点按/滑动均走官方 gRPC，等价触摸。</p>
   </section>
   <aside class="ops">
@@ -61,6 +63,10 @@ button.wide { grid-column: span 2; }
       <button id="btn-snap">保存截图</button>
       <button id="btn-full">全屏画面</button>
       <button id="btn-copy">复制状态</button>
+      <button class="wide" id="btn-more">点按 ⋯（开发者信息）</button>
+      <button class="wide" id="btn-swipe-l">快速横滑 ←（滚到 17–21 时）</button>
+      <button class="wide" id="btn-swipe-r">快速横滑 →（验证右滑不退出）</button>
+      <button class="wide" id="btn-reset">重置应用（回到初始态）</button>
     </div>
     <div class="err" id="err"></div>
     <div class="debug">
@@ -83,8 +89,7 @@ var dFps = document.getElementById('d-fps');
 var dTap = document.getElementById('d-tap');
 var dEmu = document.getElementById('d-emu');
 var dLog = document.getElementById('d-log');
-var img = new Image();
-img.onload = function () { cv.width = img.width; cv.height = img.height; ctx.drawImage(img, 0, 0); };
+var live = document.getElementById('live');
 var last = 0, lastSeq = 0, logLines = [];
 function log(s) { logLines.unshift(new Date().toLocaleTimeString() + ' ' + s); dLog.textContent = logLines.slice(0, 6).join(' ' + String.fromCharCode(10)); }
 function post(u, b) {
@@ -92,20 +97,9 @@ function post(u, b) {
     .then(function (r) { if (!r.ok) return r.text().then(function (t) { err.textContent = '失败: ' + t; log('失败 ' + u); }); err.textContent = ''; return r.text().then(function () { log('OK ' + u); }); })
     .catch(function (e) { err.textContent = String(e); });
 }
-var es = new EventSource('api/stream');
-es.onmessage = function (e) {
-  try {
-    var d = JSON.parse(e.data);
-    img.src = 'data:image/png;base64,' + d.img;
-    dot.classList.add('on');
-    var t = performance.now();
-    var fps = (last && t > last) ? (1000 / (t - last)).toFixed(1) : '-';
-    last = t; lastSeq = d.seq;
-    dConn.textContent = '已连接'; dSeq.textContent = String(d.seq); dFps.textContent = fps;
-    st.textContent = '已连接 · 帧 #' + d.seq + (fps !== '-' ? ' · ' + fps + ' fps' : '');
-  } catch (x) {}
-};
-es.onerror = function () { dot.classList.remove('on'); st.textContent = '连接中断，重试中…'; dConn.textContent = '断开'; };
+live.src = 'api/mjpeg';
+live.onload = function () { dot.classList.add('on'); st.textContent = '已连接 · MJPEG 低延迟直播'; dConn.textContent = '已连接'; };
+live.onerror = function () { dot.classList.remove('on'); st.textContent = '画面中断，3 秒后重连…'; dConn.textContent = '断开'; setTimeout(function () { live.src = 'api/mjpeg?t=' + Date.now(); }, 3000); };
 function pt(ev) { var r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) * (cv.width / r.width), y: (ev.clientY - r.top) * (cv.height / r.height) }; }
 function move(p, buttons) { return post('api/mouse', { x: p.x, y: p.y, buttons: buttons }); }
 var dragging = false, dragPts = [], lastPt = null, dragStart = 0;
@@ -138,21 +132,36 @@ cv.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
 document.getElementById('btn-wake').onclick = function () { post('api/action', { name: 'wake' }); };
 document.getElementById('btn-restart').onclick = function () { post('api/action', { name: 'restart' }); };
 document.getElementById('btn-reload').onclick = function () { post('api/action', { name: 'reload' }); };
-document.getElementById('btn-snap').onclick = function () { var a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = 'vela-frame-' + lastSeq + '.png'; a.click(); log('已保存截图 #' + lastSeq); };
+document.getElementById('btn-snap').onclick = function () { fetch('api/frame').then(function (r) { return r.blob(); }).then(function (b) { var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'vela-frame-' + lastSeq + '.png'; a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); }, 3000); log('已保存原生截图 #' + lastSeq); }); };
 document.getElementById('btn-full').onclick = function () {
   var el = document.querySelector('.stage');
   if (!document.fullscreenElement) { if (el.requestFullscreen) el.requestFullscreen(); } else if (document.exitFullscreen) { document.exitFullscreen(); }
 };
+function quickGesture(points) { return post('api/gesture', { points: points, durationMs: 300 }); }
+document.getElementById('btn-more').onclick = function () { quickGesture([{ x: 304, y: 24 }]); };
+document.getElementById('btn-swipe-l').onclick = function () { quickGesture([{ x: 300, y: 290 }, { x: 250, y: 290 }, { x: 200, y: 290 }, { x: 150, y: 290 }, { x: 100, y: 290 }, { x: 70, y: 290 }]); };
+document.getElementById('btn-swipe-r').onclick = function () { quickGesture([{ x: 70, y: 290 }, { x: 120, y: 290 }, { x: 180, y: 290 }, { x: 240, y: 290 }, { x: 300, y: 290 }]); };
+document.getElementById('btn-reset').onclick = function () { post('api/action', { name: 'restart' }); };
 document.getElementById('btn-copy').onclick = function () {
   var s = 'panel seq=' + lastSeq + ' fps=' + dFps.textContent + ' emu=' + dEmu.textContent + ' conn=' + dConn.textContent;
   if (navigator.clipboard) navigator.clipboard.writeText(s); log('已复制状态');
 };
+var prevSeq = -1, prevT = 0, prevFrame = null;
 function pollStatus() {
   fetch('api/status').then(function (r) { return r.json(); }).then(function (d) {
-    dEmu.textContent = d.emulator + ' · booted=' + d.booted + ' · gRPC ' + d.grpcPort + ' · ' + (d.injection || '-');
+    var now = performance.now();
+    if (prevSeq >= 0 && d.seq !== prevSeq && prevT) {
+      var fps = ((d.seq - prevSeq) * 1000 / (now - prevT)).toFixed(1);
+      dFps.textContent = fps; prevFrame = fps;
+    }
+    prevSeq = d.seq; prevT = now;
+    dSeq.textContent = String(d.seq);
+    dConn.textContent = d.active ? '画面更新中' : '已连接（静止）';
+    st.textContent = '已连接 · 帧 #' + d.seq + ' · ' + (prevFrame ? prevFrame + ' fps' : '等待更新') + ' · ' + (d.liveW ? d.liveW + '×' + d.liveH : '-');
+    dEmu.textContent = d.emulator + ' · v' + (d.panelVersion || '-') + ' · ' + (d.liveW ? d.liveW + '×' + d.liveH : '-') + ' 直播 · rpc ' + (d.rpcMs || 0) + 'ms · ' + (d.frameBytes ? (d.frameBytes / 1024).toFixed(0) + 'KB/帧' : '-') + ' · ' + (d.injection || '-');
   }).catch(function () {});
 }
-pollStatus(); setInterval(pollStatus, 5000);
+pollStatus(); setInterval(pollStatus, 2000);
 window.addEventListener('orientationchange', function () { setTimeout(pollStatus, 500); });
 </script>
 </body>

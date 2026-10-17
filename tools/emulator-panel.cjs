@@ -111,28 +111,66 @@ function adb(args, timeoutMs) {
 }
 
 const sseClients = new Set();
+const mjpegClients = new Set();
+const MJ_BOUNDARY = 'velaframe';
+function mjpegWrite(buf) {
+  const head = '--' + MJ_BOUNDARY + EOL + 'Content-Type: image/png' + EOL + 'Content-Length: ' + buf.length + EOL + EOL;
+  for (const c of mjpegClients) {
+    try { c.write(head); c.write(buf); c.write(EOL); } catch (e) { mjpegClients.delete(c); }
+  }
+}
 let lastHash = '';
 let seq = 0;
-let lastPng = null;
+let lastPng = null; // 最近一帧（直播缩放后）
 let lastError = '';
 
+/* ---------- 直播帧参数 ----------
+   官方 ImageFormat 支持 width/height 缩放：默认 0.5（168×240）传输体积约为原图 1/4，
+   手机端解码与网络都更轻；抓图/保存走 /api/frame 的原生 336×480。 */
+const LIVE_SCALE = Math.max(0.25, Math.min(1, Number(process.env.PANEL_SCALE) || 0.5));
+const DEV_W = Number(cfg['hw.lcd.width'] || 336);
+const DEV_H = Number(cfg['hw.lcd.height'] || 480);
+const LIVE_W = Math.round(DEV_W * LIVE_SCALE);
+const LIVE_H = Math.round(DEV_H * LIVE_SCALE);
+const LIVE_FMT = { format: 'PNG', width: LIVE_W, height: LIVE_H, display: 0 };
+const NATIVE_FMT = { format: 'PNG', width: 0, height: 0, display: 0 };
+const stats = { frames: 0, pushes: 0, rpcMs: 0, bytes: 0, started: Date.now() };
+
+async function grab(fmt) {
+  return Buffer.from((await call(client.getScreenshot, fmt)).image || []);
+}
+
+/* 自适应节奏：活跃时 ~30fps（33ms 一帧），画面静止 600ms 后降到 ~8fps 省 CPU。 */
 async function frameLoop() {
+  const t0 = Date.now();
   try {
-    const res = await call(client.getScreenshot, ctl.ImageFormat);
-    const buf = Buffer.from(res.image || []);
-    if (buf.length < 100) return;
-    const hash = crypto.createHash('md5').update(buf).digest('hex');
-    if (hash === lastHash) return;
-    lastHash = hash;
-    lastPng = buf;
-    seq += 1;
-    const payload = 'data: ' + JSON.stringify({ seq, img: buf.toString('base64') }) + NL2;
-    for (const r of sseClients) r.write(payload);
+    const buf = await grab(LIVE_FMT);
+    if (buf.length >= 100) {
+      const hash = crypto.createHash('md5').update(buf).digest('hex');
+      if (hash !== lastHash) {
+        lastHash = hash;
+        lastPng = buf;
+        seq += 1;
+        lastActiveAt = t0;
+        stats.frames += 1;
+        stats.pushes += 1;
+        stats.bytes = buf.length;
+        const ssePayload = 'data: ' + JSON.stringify({ seq, img: buf.toString('base64'), w: LIVE_W, h: LIVE_H, bytes: buf.length }) + NL2;
+        for (const r of sseClients) r.write(ssePayload);
+        mjpegWrite(buf);
+      }
+    }
   } catch (e) {
     lastError = e.message;
   }
+  const spent = Date.now() - t0;
+  stats.rpcMs = Math.round(stats.rpcMs * 0.8 + spent * 0.2);
+  const idle = Date.now() - lastActiveAt > 600;
+  const target = idle ? 120 : 33;
+  setTimeout(frameLoop, Math.max(4, target - spent));
 }
-setInterval(frameLoop, 250);
+let lastActiveAt = Date.now();
+frameLoop();
 
 const PAGE = fs.readFileSync(path.join(__dirname, 'panel-ui.html'), 'utf8');
 
@@ -166,15 +204,36 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify({
       emulator: SN, grpcPort: cfg['grpc.port'], booted, seq, lastError, up: true,
-      panelVersion: '1.1.0', injection: 'pointer-gesture-replay', touchSupported: false,
+      panelVersion: '1.2.0', injection: 'pointer-gesture-replay', touchSupported: false,
+      liveScale: LIVE_SCALE, liveW: LIVE_W, liveH: LIVE_H, rpcMs: stats.rpcMs, frameBytes: stats.bytes,
+      active: Date.now() - lastActiveAt < 600,
       actionLog: ACTION_LOG, hint: '拖动 = 录路径 + 服务端回放 sendMouse（Vela 5.0 镜像 sendTouch 无响应）'
     }));
     return;
   }
+  if (req.method === 'GET' && url.pathname === '/api/mjpeg') {
+    res.writeHead(200, {
+      'content-type': 'multipart/x-mixed-replace; boundary=' + MJ_BOUNDARY,
+      'cache-control': 'no-store',
+      connection: 'close',
+      'x-live-scale': String(LIVE_SCALE)
+    });
+    if (lastPng) {
+      res.write('--' + MJ_BOUNDARY + EOL + 'Content-Type: image/png' + EOL + 'Content-Length: ' + lastPng.length + EOL + EOL);
+      res.write(lastPng);
+      res.write(EOL);
+    }
+    mjpegClients.add(res);
+    req.on('close', () => mjpegClients.delete(res));
+    return;
+  }
   if (req.method === 'GET' && url.pathname === '/api/frame') {
-    if (!lastPng) { res.writeHead(503); res.end('no frame yet'); return; }
-    res.writeHead(200, { 'content-type': 'image/png' });
-    res.end(lastPng);
+    try {
+      const buf = await grab(NATIVE_FMT);
+      if (buf.length < 100) { res.writeHead(503); res.end('no frame'); return; }
+      res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store' });
+      res.end(buf);
+    } catch (e) { res.writeHead(503); res.end(String(e.message || e)); }
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/mouse') {
