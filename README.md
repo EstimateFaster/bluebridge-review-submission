@@ -14,6 +14,7 @@
 | 设计预览（辅助） | `screenshots/design-preview-*.png`（同源 HTML 渲染，用于快速迭代） |
 | 资产生成脚本 | `assets/gen_assets.py`（背景、天气图标、指标图标、应用图标全部本地生成） |
 | 模拟器脚本 | `tools/emulator-run.cjs`（创建 VVD + 启动 + 安装 rpk）、`tools/emulator-shot.cjs`（gRPC 抓真实截图） |
+| 交互面板 | `tools/emulator-panel.cjs`（浏览器实时看画面 + 点击/拖拽注入 + 重启/重装），见 `docs/emulator-verification.md` |
 | 预览渲染脚本 | `tools/render-preview.cjs` + `tools/screenshot.cjs`（同源 HTML 渲染，快速迭代用） |
 | 调研笔记 | `docs/research/`（官方文档要点、336×480 UI 规范、决策记录） |
 
@@ -36,6 +37,11 @@ npm run build
 # 4. 无图形界面的 Linux 上直接跑官方 Vela 模拟器（本仓库验证方式）
 node tools/emulator-run.cjs      # 创建 VVD + 启动模拟器 + 安装并启动本应用（后台常驻）
 node tools/emulator-shot.cjs emu-01-main.png   # 任意时刻抓真实截图（gRPC，336×480）
+
+# 5. 可选：浏览器交互面板（实时画面 + 点击测试）
+node tools/emulator-panel.cjs    # 打开 http://127.0.0.1:8770/
+#    - 点击/拖拽画布 = 真实鼠标事件注入（已在点击计数测试应用上验证有效）
+#    - 按钮：重启应用 / 重装当前 rpk / 保存当前帧
 ```
 
 模拟器配置与日志证据见 [docs/emulator-verification.md](docs/emulator-verification.md)。
@@ -50,6 +56,7 @@ node tools/emulator-shot.cjs emu-01-main.png   # 任意时刻抓真实截图（g
 - 解包核对 rpk：包含 `manifest.json`、`pages/index/index.js`、21 个本地资产文件，无网络请求代码；
 - 336×480 布局预算校验：内容实际占用至 y=462（画布 480），无溢出、无滚动；
 - **官方 Vela 模拟器（VVD）实测**：`Boot completed in 5729 ms` → `pm install → onInstallResult: com.bluebridge.review.weather(success 0)` → `am start → AMS pushNewActivity ... [resumed]`；gRPC `getScreenshot` 返回 336×480 真实帧，见 `screenshots/emu-*.png`；
+- **交互注入实测**：另建「点击计数」测试应用，通过 `tools/emulator-panel.cjs` 的 HTTP 接口发送鼠标按下/抬起，界面数字从 0 变 1（gRPC `sendMouse` 有效）；同条件 `sendTouch` 无响应、`sendKey` 对 Vela 5.0 镜像无效果（已在面板中如实标注）；
 - 9 项必含信息逐项核对见下表。
 
 > **截图说明**：开发机为无图形界面的 Linux 服务器，未安装 AIoT-IDE，但已通过**小米官方 Vela 模拟器 SDK**（`@aiot-toolkit/emulator` + `vela-watch-5.0` 镜像）以 `-no-window` + SwiftShader 方式启动 VVD，adb 安装 rpk 并抓取真实渲染帧（`tools/emulator-shot.cjs`）。`screenshots/emu-01-main.png` 为模拟器原始帧（336×480），其余为该帧的 2x/裁剪衍生素材；`screenshots/design-preview-*` 是同源 HTML 预览，仅用于迭代对比。
@@ -154,6 +161,7 @@ node tools/emulator-shot.cjs emu-01-main.png   # 任意时刻抓真实截图（g
 4. **v3 资产修复**：渲染发现主天气图标外圈有方形光晕 → 定位为 PNG 边缘 alpha 未归零 + RGBA 直接高斯模糊把透明区黑色混入；改为「alpha 阈值 + 只模糊 alpha 通道 + 渐变用 alpha 蒙版合成」，图标干净。
 5. **v4 结构加固**：指标值、日出日落改为「flex 行 + 独立 text」，不再依赖 `<span>` 的样式与 margin（Vela `text` 内嵌 span 的样式支持有限）；单位着色、对比度提升（三级文字 `#74839c`→`#8b9bb4`），重建并通过 336×480 溢出校验（内容底边 462）。
 6. **v5 模拟器实机验证**：下载官方 Vela 模拟器 SDK（emulator 0.1.0 + vela-watch-5.0 镜像）→ 修复 qemu 权限/依赖库/SwiftShader → 创建 336×480 VVD → adb 安装并启动 rpk → gRPC 抓取真实帧；真实渲染与设计预览高度一致，9 项信息全部可见；补齐 `tools/emulator-run.cjs`/`emulator-shot.cjs` 与验证记录。
+7. **v6 交互面板**：补 `tools/emulator-panel.cjs`（SSE 实时画面 + 点击注入 + 重启/重装）；用「点击计数」测试应用验证「面板点击 → gRPC sendMouse → UI 响应」链路（数字 0→1）；同时实测发现 Vela 5.0 镜像下 `sendTouch`/`sendKey` 无效、屏幕默认熄屏需先点击唤醒，均写入文档。
 
 ## 八、目录结构
 
@@ -183,4 +191,5 @@ node tools/emulator-shot.cjs emu-01-main.png   # 任意时刻抓真实截图（g
 - 模拟器运行在无 GPU 的 Linux 上（SwiftShader 软件渲染；guest 为 ARM，走 QEMU TCG），**帧率/性能不代表真机**，但布局、字体、颜色与组件行为来自真实 Vela 运行时；
 - 使用 Vela 5.0 镜像（`vela-watch-5.0`），真机系统版本可能略有差异，建议评审在真机/ AIoT-IDE 复核一次；
 - 调试签名使用 aiot-toolkit 内置证书，仅够模拟器/真机调试，不可用于正式发布；
-- 模拟器 SDK（约 450MB）不随提交物分发，复现方式见 `docs/emulator-verification.md`。
+- 模拟器 SDK（约 450MB）不随提交物分发，复现方式见 `docs/emulator-verification.md`；
+- 交互面板是本地开发工具（仅监听 127.0.0.1:8770，约 4fps 轮询），不是 DSH 插件；受 Vela 镜像限制：鼠标注入有效、`sendTouch` 无效、键盘事件无响应；同一时刻只运行一个快应用（切换不同应用时 adb `am start` 可能阻塞，需重启 VVD）。

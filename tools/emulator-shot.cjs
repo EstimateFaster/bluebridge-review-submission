@@ -10,7 +10,8 @@ const pl = require('@grpc/proto-loader');
 
 const ROOT = path.resolve(__dirname, '..');
 const EMU = path.join(ROOT, 'node_modules/@aiot-toolkit/emulator');
-const out = path.join(ROOT, 'screenshots', process.argv[2] || 'emu-01.png');
+const arg = process.argv[2] || 'emu-01.png';
+const out = path.isAbsolute(arg) ? arg : path.join(ROOT, 'screenshots', arg);
 
 function runningConfig() {
   const dirs = [

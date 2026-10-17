@@ -88,7 +88,34 @@ node tools/emulator-run.cjs
 node tools/emulator-shot.cjs emu-01-main.png
 ```
 
-## 七、说明与限制
+## 七、交互面板（本地开发工具）
+
+无 AIoT-IDE 时看画面只能截图，于是补了一个浏览器面板（`tools/emulator-panel.cjs`）：
+
+```bash
+node tools/emulator-panel.cjs        # 打开 http://127.0.0.1:8770/
+```
+
+- 画面：服务端每 250ms 调 gRPC `getScreenshot`，变化才推送（SSE），前端 canvas 渲染；
+- 点击/拖拽：POST `/api/mouse` → gRPC `sendMouse`（按下 buttons=1 / 抬起 buttons=0）；
+- 按钮：重启应用、重装当前 rpk、保存当前帧（走本地 adb）；
+- 安全：只监听 127.0.0.1，不对外网暴露。
+
+**输入链路验证**：另建一个「点击计数」测试应用（点击 +1），通过面板 HTTP 接口点击按钮后，画面数字 0 → 1，证明「面板点击 → gRPC sendMouse → 模拟器 UI 响应」链路可用。
+
+**实测结论（Vela 5.0 镜像）**：
+| 注入方式 | 结果 |
+|---|---|
+| gRPC `sendMouse`（down/up） | ✅ 有效（按钮点击、计数变化） |
+| gRPC `sendTouch`（pressure 200/0） | ❌ 无响应（同位置同坐标无变化） |
+| gRPC `sendKey`（GoHome/GoBack、Evdev 102/158） | ❌ 无效果 |
+
+**限制**：
+1. 约 4fps（轮询 + 变化推送），不是视频流；
+2. Vela 同一时刻只跑一个快应用：安装/启动另一个应用时 adb `am start` 可能阻塞，切换应用建议重启 VVD；
+3. 屏幕默认会熄屏，首次点击用于唤醒；熄屏时截图返回全黑帧。
+
+## 八、说明与限制
 
 1. 主机无 GPU，使用 SwiftShader 软件渲染；且 guest 是 ARM（x86 主机走 QEMU TCG），**帧率/性能不代表真机**，但布局、字体、颜色、组件行为与真实 Vela 运行时一致；
 2. 使用 Vela 5.0 镜像（`vela-watch-5.0`），真机系统版本可能略有差异；

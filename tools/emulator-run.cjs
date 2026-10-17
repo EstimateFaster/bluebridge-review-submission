@@ -97,6 +97,11 @@ async function screenshot(grpcConfig, sn, tag) {
   if (!inst) throw new Error('no emulator instance');
   console.log('INSTANCE_SN', inst.sn);
   await inst.isConnected();
+  if (process.env.SKIP_APP) {
+    console.log('SKIP_APP=1，不安装应用；模拟器保持运行');
+    setInterval(() => {}, 1000);
+    return;
+  }
   const target = await inst.pushRpk(rpk, pkg);
   console.log('PUSHED', target);
   await inst.install(target, { packageName: pkg });
