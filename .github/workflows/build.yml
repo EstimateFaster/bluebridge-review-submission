@@ -1,0 +1,76 @@
+name: Build Vela RPK
+
+on:
+  push:
+    branches: [main, actions-build]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and verify RPK
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          set -x
+          if ! npm ci --no-audit --no-fund; then
+            echo "::warning::npm ci with npmmirror failed, retrying with npmjs registry"
+            rm -rf node_modules
+            sed -i 's#https://registry.npmmirror.com#https://registry.npmjs.org#g' package-lock.json
+            npm ci --no-audit --no-fund
+          fi
+
+      - name: Build RPK
+        run: npm run build
+
+      - name: Verify artifacts
+        run: |
+          set -e
+          echo "=== dist ==="
+          ls -lh dist
+          RPK=$(ls dist/*.rpk 2>/dev/null | head -1 || true)
+          if [ -z "$RPK" ]; then echo "::error::未生成 RPK"; exit 1; fi
+          echo "RPK=$RPK"
+          echo "size=$(stat -c%s "$RPK") bytes"
+          echo "md5=$(md5sum "$RPK" | cut -d' ' -f1)"
+          echo "sha256=$(sha256sum "$RPK" | cut -d' ' -f1)"
+          python3 - "$RPK" <<'PY'
+          import sys, zipfile, json
+          path = sys.argv[1]
+          with zipfile.ZipFile(path) as z:
+              names = z.namelist()
+              print("zip entries:", len(names))
+              manifest = json.loads(z.read("manifest.json").decode("utf-8"))
+              print("package:", manifest.get("package"))
+              print("versionName:", manifest.get("versionName"))
+              print("versionCode:", manifest.get("versionCode"))
+              print("entry:", manifest.get("router", {}).get("entry"))
+              print("pages:", sorted(manifest.get("router", {}).get("pages", {}).keys()))
+              print("assets:", [n for n in names if n.startswith("common/")][:5], "...")
+          PY
+          echo "=== committed reference rpk ==="
+          if [ -f vela-weather-336x480.debug.rpk ]; then
+            echo "committed_md5=$(md5sum vela-weather-336x480.debug.rpk | cut -d' ' -f1)"
+            echo "committed_size=$(stat -c%s vela-weather-336x480.debug.rpk)"
+          fi
+
+      - name: Upload RPK
+        uses: actions/upload-artifact@v4
+        with:
+          name: vela-weather-rpk
+          path: dist/*.rpk
+          if-no-files-found: error
+          retention-days: 14
