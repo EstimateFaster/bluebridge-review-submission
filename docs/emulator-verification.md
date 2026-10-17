@@ -144,3 +144,10 @@ node tools/emulator-panel.cjs        # 打开 http://127.0.0.1:8770/
 - 截图：`screenshots/emu-task1-main.png`、`emu-task1-dev.png`、`emu-task1-exit.png`。
 
 **注意**：`pm install` 不能带 `-r`（Vela 5 返回 `Failed to deal with rpkpackage -38`），直接 `pm install <rpk>` 返回 `(success 0)`；`am start` 在应用已运行时可能只打印 usage，最稳妥是 `adb shell reboot` 后 `am start <包名>`。
+
+**终版复验（11:48，rpk md5 `f3069a6a057ff8003de4e5e5e6b4de11`，152,782 B）**：
+- 顶栏单独一行（`‹` 32×32 @ (32,24)、`⋯` 32×32 @ (304,24)），地区/风向回到第二行；
+- 横滑：鼠标「按下→分步移动→抬起」等价触摸滑动，指标行滑出第 4 卡「风向」、5 小时行显示 17–21 时；
+- 右滑（左→右拖）不退出：横滑容器消费手势，页面 `onBackPress` 返回 `true` 兜底；
+- `‹` 点击退出（近黑帧 1,650 B）、`⋯` 打开/关闭开发者信息正常；
+- 截图：`emu-task1-main.png`、`hours-scroll.png`、`metrics-scroll.png`、`dev.png`、`rightswipe.png`、`exit.png`。

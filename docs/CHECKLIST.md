@@ -9,7 +9,7 @@
 |---|---|---|---|
 | 1 | 必须是 Vela 快应用（rpk），能构建、能运行 | ✅ | `npm run build` 通过（aiot-toolkit 2.0.5 / Node 22.23.3），产物 `vela-weather-336x480.debug.rpk`（149,829 B）；官方 Vela 模拟器实测：`Boot completed in 5729 ms`、`pm install → (success 0)`、`am start → pushNewActivity [resumed]`，真实截图 336×480 |
 | 2 | **必须单页 `.ux` 文件**，不做多页路由跳转 | ✅ | `src/pages/` 下只有 `index/index.ux`；`manifest.json` 的 `router.pages` 仅注册 `pages/index`；源码中无 `router.push/replace/back`、无 `navigate` |
-| 3 | 适配 336×480（`designWidth: 336`）竖屏 | ✅ | `config.designWidth = 336`；`.page { width:336px; height:480px }`；内容实测底边 y=462 ≤ 480，无溢出/无滚动 |
+| 3 | 适配 336×480（`designWidth: 336`）竖屏 | ✅ | `config.designWidth = 336`；`.page { width:336px; height:480px }`；内容实测底边 ≈471 ≤ 480，无溢出、无垂直滚动（指标/小时为横向 `scroll-x`） |
 | 4 | 数据全部本地模拟，不发起网络请求 | ✅ | `features` 未声明 `system.fetch` / `system.network`；`src/` 中无 `fetch`、无 http(s) 地址、无 `@system` 网络调用；天气数据全部写在 `script.data` 常量 |
 | 5 | 建议引入资产提升视觉质量 | ✅ | 21 个自绘 PNG：336×480 夜空背景、5 种天气图标（128/48 两档）、7 个指标/太阳图标、192×192 应用图标；资产由 `assets/gen_assets.py` 生成，无第三方素材 |
 
@@ -46,7 +46,7 @@
 | 信息完整性 | 10% | 强 | 9 项齐全且数据自洽；另含体感、天气趋势、带伞提示 |
 | 视觉设计 | 25% | 中上 | 夜空渐变背景 + 暖色强调 + 自绘天气图标；面板层级清晰，但资产为程序化自绘、非手绘插画 |
 | 信息层级 | 25% | 强 | 温度 80px 绝对主视觉 → 状态/指标 → 5 小时 → 7 天 → 日出日落；7 天横排列是密度关键取舍 |
-| 小屏适配 | 20% | 强 | 336×480 预算表逐项排满（462/480），显式 line-height，无溢出；16px 安全边距避开圆角 |
+| 小屏适配 | 20% | 强 | 336×480 预算表逐项排满（≈471/480），显式 line-height，无垂直溢出；16px 安全边距避开圆角；横滑组件不改变一屏信息完整性 |
 | 细节与资产 | 10% | 中上 | 单位着色、面板分组、图标风格统一；无动效（单页静态展示，题面未强制） |
 | 说明与答辩 | 10% | 强 | README 含设计取舍、现场改动预案、AI 使用与踩坑记录、调研来源 |
 
@@ -78,3 +78,17 @@
 | 点覆盖层 `×` | (290, 155) | 覆盖层关闭，主屏完全还原（截图与关闭前逐字节一致） |
 
 实现方式：`@system.app` + `@system.device`，均为 Vela 官方系统接口；无网络、无第三方依赖；`app.terminate()` 失败时回退 `router.back()` + toast。截图：`screenshots/emu-task1-main.png`、`emu-task1-dev.png`、`emu-task1-exit.png`。
+
+## 八、终版横滑 / 右滑 / 顶栏复验（2026-10-17 11:48）
+
+rpk：`vela-weather-336x480.debug.rpk`，152,782 B，md5 `f3069a6a057ff8003de4e5e5e6b4de11`。
+
+| 操作 | 注入方式 | 结果 |
+|---|---|---|
+| 指标行左滑 | 鼠标按下→分步移动→抬起 (250,196)→(70,196) | 第 4 张「风向 东南 2级」滑出并完整显示 |
+| 5 小时行左滑 | 同法 (250,290)→(70,290) | 显示 17–21 时（共 8 项） |
+| 右滑（左→右拖） | (60,300)→(320,300) | 应用保持在前台，**不退出**（横滑容器消费手势 + `onBackPress` 返回 true） |
+| 左上 `‹` | 点击 (32,24) | 退出快应用（帧 1,650 B 近黑） |
+| 右上 `⋯` | 点击 (304,24) | 开发者信息覆盖层（包名/版本/设备 Emulator-Vela/系统版本 1.2.0/336×480），点遮罩关闭 |
+
+截图：`screenshots/emu-task1-hours-scroll.png`、`emu-task1-metrics-scroll.png`、`emu-task1-rightswipe.png`、`emu-task1-dev.png`、`emu-task1-exit.png`。

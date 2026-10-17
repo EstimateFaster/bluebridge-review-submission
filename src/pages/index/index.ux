@@ -4,18 +4,21 @@
 
     <div class="content">
       <!-- 顶部：地区 + 风向 -->
-      <div class="topbar">
+      <div class="hdr">
         <div class="hbtn" onclick="onExit">
           <image class="hicon" src="/common/weather/hdr-back.png"></image>
         </div>
+        <div class="hbtn" onclick="onMore">
+          <image class="hicon hicon-more" src="/common/weather/hdr-more.png"></image>
+        </div>
+      </div>
+
+      <div class="topbar">
         <div class="city-wrap">
           <image class="pin" src="/common/weather/m-location.png"></image>
           <text class="city">北京 · 朝阳</text>
         </div>
         <text class="wind">东南风 2级</text>
-        <div class="hbtn hbtn-right" onclick="onMore">
-          <image class="hicon" src="/common/weather/hdr-more.png"></image>
-        </div>
       </div>
 
       <!-- 主视觉：温度 + 天气图标 -->
@@ -34,6 +37,7 @@
       </div>
 
       <!-- 三项指标 -->
+      <scroll class="metrics-scroll" scroll-x="true" scroll-y="false">
       <div class="metrics">
         <div class="metric">
           <div class="metric-head">
@@ -65,7 +69,18 @@
             <text class="metric-unit unit-uv">中等</text>
           </div>
         </div>
+        <div class="metric">
+          <div class="metric-head">
+            <image class="metric-icon" src="/common/weather/m-wind.png"></image>
+            <text class="metric-label">风向</text>
+          </div>
+          <div class="metric-line">
+            <text class="metric-value metric-value-sm">东南</text>
+            <text class="metric-unit">2级</text>
+          </div>
+        </div>
       </div>
+      </scroll>
 
       <!-- 未来 5 小时 -->
       <div class="panel panel-hours">
@@ -74,6 +89,7 @@
           <text class="panel-title">未来 5 小时</text>
           <text class="panel-sub">14:20 更新 · 多云转小雨</text>
         </div>
+        <scroll class="hours-scroll" scroll-x="true" scroll-y="false">
         <div class="hours">
           <div class="hour" for="{{hours}}" tid="time">
             <text class="hour-time">{{$item.time}}</text>
@@ -81,6 +97,7 @@
             <text class="hour-temp">{{$item.temp}}°</text>
           </div>
         </div>
+        </scroll>
       </div>
 
       <!-- 未来 7 天 -->
@@ -157,32 +174,43 @@
   width: 336px;
   height: 480px;
   flex-direction: column;
-  padding: 16px 16px 12px 16px;
+  padding: 8px 16px 8px 16px;
 }
 
 /* ---------- 顶部 ---------- */
-.topbar {
+.hdr {
   width: 304px;
-  height: 30px;
+  height: 32px;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
 }
 .hbtn {
-  width: 26px;
-  height: 26px;
-  border-radius: 9px;
-  background-color: rgba(255, 255, 255, 0.08);
+  width: 32px;
+  height: 32px;
+  border-radius: 11px;
+  background-color: rgba(255, 255, 255, 0.10);
+  border-width: 1px;
+  border-color: rgba(255, 255, 255, 0.06);
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.hbtn-right {
-  margin-left: 6px;
-}
 .hicon {
-  width: 18px;
-  height: 18px;
+  width: 19px;
+  height: 19px;
+}
+.hicon-more {
+  width: 21px;
+  height: 21px;
+}
+.topbar {
+  width: 304px;
+  height: 24px;
+  margin-top: 2px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
 }
 /* ---------- 开发者信息 ---------- */
 .dev-mask {
@@ -270,8 +298,8 @@
 /* ---------- 主视觉 ---------- */
 .hero {
   width: 304px;
-  height: 104px;
-  margin-top: 0;
+  height: 96px;
+  margin-top: 2px;
   flex-direction: row;
   justify-content: space-between;
   align-items: flex-end;
@@ -316,22 +344,28 @@
   color: #8b9bb4;
 }
 .hero-icon {
-  width: 80px;
-  height: 80px;
-  margin-bottom: 2px;
+  width: 96px;
+  height: 96px;
+  margin-bottom: 0;
+  margin-right: 4px;
 }
 
 /* ---------- 指标卡 ---------- */
-.metrics {
+.metrics-scroll {
   width: 304px;
-  height: 58px;
+  height: 56px;
   margin-top: 4px;
+}
+.metrics {
+  width: 408px;
+  height: 56px;
   flex-direction: row;
-  justify-content: space-between;
 }
 .metric {
   width: 96px;
-  height: 58px;
+  height: 56px;
+  margin-right: 8px;
+  flex-shrink: 0;
   background-color: rgba(255, 255, 255, 0.06);
   border-width: 1px;
   border-color: rgba(255, 255, 255, 0.07);
@@ -380,6 +414,10 @@
 .unit-uv {
   color: #fbbf24;
 }
+.metric-value-sm {
+  font-size: 22px;
+  line-height: 30px;
+}
 
 /* ---------- 面板 ---------- */
 .panel {
@@ -392,10 +430,10 @@
   flex-direction: column;
 }
 .panel-hours {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .panel-days {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .panel-head {
   flex-direction: row;
@@ -423,16 +461,20 @@
 }
 
 /* ---------- 5 小时 ---------- */
-.hours {
+.hours-scroll {
   width: 282px;
-  height: 62px;
+  height: 60px;
   margin-top: 4px;
+}
+.hours {
+  width: 416px;
+  height: 60px;
   flex-direction: row;
-  justify-content: space-between;
 }
 .hour {
-  width: 54px;
-  height: 62px;
+  width: 52px;
+  height: 60px;
+  flex-shrink: 0;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
@@ -493,7 +535,7 @@
 .sunrow {
   width: 304px;
   height: 20px;
-  margin-top: 6px;
+  margin-top: 4px;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
@@ -557,7 +599,10 @@ export default {
       { time: '15时', icon: '/common/weather/w-cloudy.png', temp: 22 },
       { time: '16时', icon: '/common/weather/w-overcast.png', temp: 21 },
       { time: '17时', icon: '/common/weather/w-rain.png', temp: 20 },
-      { time: '18时', icon: '/common/weather/w-rain.png', temp: 19 }
+      { time: '18时', icon: '/common/weather/w-rain.png', temp: 19 },
+      { time: '19时', icon: '/common/weather/w-cloudy.png', temp: 18 },
+      { time: '20时', icon: '/common/weather/w-clear.png', temp: 17 },
+      { time: '21时', icon: '/common/weather/w-clear.png', temp: 16 }
     ],
     days: [
       { day: '今天', icon: '/common/weather/w-partly.png', high: 26, low: 17 },
@@ -568,6 +613,10 @@ export default {
       { day: '周二', icon: '/common/weather/w-overcast.png', high: 25, low: 16 },
       { day: '周三', icon: '/common/weather/w-rain.png', high: 24, low: 15 }
     ]
+  },
+  onBackPress() {
+    // 拦截系统右滑/返回，避免左右滑动组件时误退出快应用；退出请用左上角 ‹
+    return true
   },
   onInit() {
     try {
