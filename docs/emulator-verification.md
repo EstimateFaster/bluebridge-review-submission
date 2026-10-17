@@ -100,6 +100,8 @@ node tools/emulator-panel.cjs        # 打开 http://127.0.0.1:8770/
   - 域名入口：`https://dsh.inklog.xx.kg/emu-panel/`（与 DSH 共用登录 cookie，未登录会跳登录页）
   - IP 兜底入口：`https://103.236.84.174:45665/emu-panel/`（nginx basic auth，凭据同 DSH）
   - nginx 反代配置：`/etc/nginx/sites-available/dsh-webui` 中 `location ^~ /emu-panel/` → `127.0.0.1:8770`（改动前已备份为同目录 `.bak-*` 文件）；验证：带登录 cookie 请求页面返回 200、`/emu-panel/api/frame` 返回 336×480 PNG、SSE 返回 `text/event-stream`；
+- 界面：`tools/panel-ui.html`（独立 HTML，移动端自适应；`touch-action:none` + pointer capture，画布上拖拽不会带动网页滚动；`overscroll-behavior:none`）；
+- 调试功能：实时帧/fps/帧序号/连接状态、点击坐标、模拟器/引导状态、操作日志、唤醒屏幕、重启应用、重装 rpk、保存完整截图、全屏画面、复制状态；
 - 画面：服务端每 250ms 调 gRPC `getScreenshot`，变化才推送（SSE），前端 canvas 渲染；
 - 点击/拖拽：POST `/api/mouse` → gRPC `sendMouse`（按下 buttons=1 / 抬起 buttons=0）；
 - 按钮：重启应用、重装当前 rpk、保存当前帧（走本地 adb）；

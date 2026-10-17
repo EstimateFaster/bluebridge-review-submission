@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Vela 模拟器面板</title>
+<style>
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #0b1220; color: #dbe6f5;
+  font-family: system-ui, -apple-system, "Noto Sans CJK SC", sans-serif;
+  overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: #0f172a; border-bottom: 1px solid #1e293b; }
+header h1 { margin: 0; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; flex: 0 0 auto; }
+.dot.on { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+.status { margin-left: auto; font-size: 12px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+main { display: flex; gap: 16px; padding: 14px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
+.stage-wrap { display: flex; flex-direction: column; align-items: center; }
+.stage { background: #0a1424; border: 1px solid #1e293b; border-radius: 22px;
+  padding: 8px; box-shadow: 0 18px 50px rgba(0,0,0,.5); }
+canvas { display: block; width: min(336px, calc(100vw - 62px)); height: auto; aspect-ratio: 336 / 480;
+  border-radius: 14px; background: #000; cursor: crosshair; touch-action: none; user-select: none; -webkit-user-select: none; }
+.hint { font-size: 11px; color: #64748b; max-width: 340px; line-height: 1.6; margin: 8px 0 0; text-align: center; }
+.ops { width: 340px; max-width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+button { background: #1e293b; color: #dbe6f5; border: 1px solid #334155; border-radius: 9px;
+  padding: 10px 8px; font-size: 13px; cursor: pointer; min-height: 40px; }
+button:hover { background: #273449; border-color: #475569; }
+button:active { transform: translateY(1px); }
+button.wide { grid-column: span 2; }
+.debug { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 10px 12px; font-size: 12px; color: #94a3b8; line-height: 1.7; }
+.debug b { color: #dbe6f5; font-weight: 600; }
+.debug .log { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #1e293b; color: #64748b;
+  max-height: 90px; overflow: auto; font-family: ui-monospace, monospace; font-size: 11px; white-space: pre-wrap; }
+.err { color: #f87171; font-size: 12px; min-height: 16px; }
+@media (max-width: 720px) {
+  main { flex-direction: column; align-items: center; padding: 10px; gap: 12px; }
+  .ops { width: 100%; max-width: 420px; }
+  header h1 { font-size: 13px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="dot"></span>
+  <h1>Vela 模拟器面板</h1>
+  <span class="status" id="status">连接中…</span>
+</header>
+<main>
+  <section class="stage-wrap">
+    <div class="stage"><canvas id="cv" width="336" height="480"></canvas></div>
+    <p class="hint">画布上直接点击 / 拖拽 = 屏幕触摸（已阻止页面滚动）；左右拖动不会带动网页。</p>
+  </section>
+  <aside class="ops">
+    <div class="grid">
+      <button id="btn-wake">唤醒屏幕</button>
+      <button id="btn-restart">重启应用</button>
+      <button id="btn-reload">重装 rpk</button>
+      <button id="btn-snap">保存截图</button>
+      <button id="btn-full">全屏画面</button>
+      <button id="btn-copy">复制状态</button>
+    </div>
+    <div class="err" id="err"></div>
+    <div class="debug">
+      <div>连接：<b id="d-conn">-</b> · 帧 <b id="d-seq">-</b> · <b id="d-fps">-</b> fps</div>
+      <div>点击坐标：<b id="d-tap">-</b></div>
+      <div>模拟器：<b id="d-emu">-</b></div>
+      <div class="log" id="d-log">等待操作…</div>
+    </div>
+  </aside>
+</main>
+<script>
+var cv = document.getElementById('cv');
+var ctx = cv.getContext('2d');
+var dot = document.getElementById('dot');
+var st = document.getElementById('status');
+var err = document.getElementById('err');
+var dConn = document.getElementById('d-conn');
+var dSeq = document.getElementById('d-seq');
+var dFps = document.getElementById('d-fps');
+var dTap = document.getElementById('d-tap');
+var dEmu = document.getElementById('d-emu');
+var dLog = document.getElementById('d-log');
+var img = new Image();
+img.onload = function () { cv.width = img.width; cv.height = img.height; ctx.drawImage(img, 0, 0); };
+var last = 0, lastSeq = 0, logLines = [];
+function log(s) { logLines.unshift(new Date().toLocaleTimeString() + ' ' + s); dLog.textContent = logLines.slice(0, 6).join(' ' + String.fromCharCode(10)); }
+function post(u, b) {
+  return fetch(u, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) })
+    .then(function (r) { if (!r.ok) return r.text().then(function (t) { err.textContent = '失败: ' + t; log('失败 ' + u); }); err.textContent = ''; return r.text().then(function () { log('OK ' + u); }); })
+    .catch(function (e) { err.textContent = String(e); });
+}
+var es = new EventSource('api/stream');
+es.onmessage = function (e) {
+  try {
+    var d = JSON.parse(e.data);
+    img.src = 'data:image/png;base64,' + d.img;
+    dot.classList.add('on');
+    var t = performance.now();
+    var fps = (last && t > last) ? (1000 / (t - last)).toFixed(1) : '-';
+    last = t; lastSeq = d.seq;
+    dConn.textContent = '已连接'; dSeq.textContent = String(d.seq); dFps.textContent = fps;
+    st.textContent = '已连接 · 帧 #' + d.seq + (fps !== '-' ? ' · ' + fps + ' fps' : '');
+  } catch (x) {}
+};
+es.onerror = function () { dot.classList.remove('on'); st.textContent = '连接中断，重试中…'; dConn.textContent = '断开'; };
+function pt(ev) { var r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) * (cv.width / r.width), y: (ev.clientY - r.top) * (cv.height / r.height) }; }
+function move(p, buttons) { return post('api/mouse', { x: p.x, y: p.y, buttons: buttons }); }
+var dragging = false;
+cv.addEventListener('pointerdown', function (ev) { ev.preventDefault(); dragging = true; if (cv.setPointerCapture) cv.setPointerCapture(ev.pointerId); var p = pt(ev); dTap.textContent = Math.round(p.x) + ', ' + Math.round(p.y); move(p, 1); });
+cv.addEventListener('pointermove', function (ev) { if (!dragging) return; ev.preventDefault(); move(pt(ev), 1); });
+cv.addEventListener('pointerup', function (ev) { if (!dragging) return; dragging = false; ev.preventDefault(); move(pt(ev), 0); });
+cv.addEventListener('pointercancel', function (ev) { if (!dragging) return; dragging = false; move(pt(ev), 0); });
+cv.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+document.getElementById('btn-wake').onclick = function () { post('api/action', { name: 'wake' }); };
+document.getElementById('btn-restart').onclick = function () { post('api/action', { name: 'restart' }); };
+document.getElementById('btn-reload').onclick = function () { post('api/action', { name: 'reload' }); };
+document.getElementById('btn-snap').onclick = function () { var a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = 'vela-frame-' + lastSeq + '.png'; a.click(); log('已保存截图 #' + lastSeq); };
+document.getElementById('btn-full').onclick = function () {
+  var el = document.querySelector('.stage');
+  if (!document.fullscreenElement) { if (el.requestFullscreen) el.requestFullscreen(); } else if (document.exitFullscreen) { document.exitFullscreen(); }
+};
+document.getElementById('btn-copy').onclick = function () {
+  var s = 'panel seq=' + lastSeq + ' fps=' + dFps.textContent + ' emu=' + dEmu.textContent + ' conn=' + dConn.textContent;
+  if (navigator.clipboard) navigator.clipboard.writeText(s); log('已复制状态');
+};
+function pollStatus() {
+  fetch('api/status').then(function (r) { return r.json(); }).then(function (d) {
+    dEmu.textContent = d.emulator + ' · booted=' + d.booted + ' · gRPC ' + d.grpcPort;
+  }).catch(function () {});
+}
+pollStatus(); setInterval(pollStatus, 5000);
+window.addEventListener('orientationchange', function () { setTimeout(pollStatus, 500); });
+</script>
+</body>
+</html>

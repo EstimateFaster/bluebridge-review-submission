@@ -14,7 +14,7 @@
 | 设计预览（辅助） | `screenshots/design-preview-*.png`（同源 HTML 渲染，用于快速迭代） |
 | 资产生成脚本 | `assets/gen_assets.py`（背景、天气图标、指标图标、应用图标全部本地生成） |
 | 模拟器脚本 | `tools/emulator-run.cjs`（创建 VVD + 启动 + 安装 rpk）、`tools/emulator-shot.cjs`（gRPC 抓真实截图） |
-| 交互面板 | `tools/emulator-panel.cjs`（浏览器实时看画面 + 点击/拖拽注入 + 重启/重装）；本机经 nginx 暴露为 `https://dsh.inklog.xx.kg/emu-panel/`，详见 `docs/emulator-verification.md` |
+| 交互面板 | `tools/emulator-panel.cjs` + `tools/panel-ui.html`（移动端自适应；画布拖拽已锁定不带动网页；实时画面 + 点击/拖拽注入 + 唤醒/重启/重装/截图/全屏/状态/坐标/日志）；本机经 nginx 暴露为 `https://dsh.inklog.xx.kg/emu-panel/`，详见 `docs/emulator-verification.md` |
 | 预览渲染脚本 | `tools/render-preview.cjs` + `tools/screenshot.cjs`（同源 HTML 渲染，快速迭代用） |
 | 调研笔记 | `docs/research/`（官方文档要点、336×480 UI 规范、决策记录） |
 

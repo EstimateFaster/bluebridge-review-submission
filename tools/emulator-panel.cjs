@@ -95,53 +95,7 @@ async function frameLoop() {
 }
 setInterval(frameLoop, 250);
 
-const PAGE = '<!DOCTYPE html>' + EOL
-+ '<html lang="zh-CN"><head><meta charset="utf-8"><title>Vela 模拟器面板</title>' + EOL
-+ '<style>' + EOL
-+ ':root{color-scheme:dark}' + EOL
-+ 'body{margin:0;background:#0b1220;color:#dbe6f5;font-family:system-ui,"Noto Sans CJK SC",sans-serif;display:flex;flex-direction:column;min-height:100vh}' + EOL
-+ 'header{padding:12px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #1e293b;background:#0f172a}' + EOL
-+ 'h1{font-size:15px;margin:0;font-weight:600}' + EOL
-+ '.dot{width:8px;height:8px;border-radius:50%;background:#64748b}' + EOL
-+ '.dot.on{background:#22c55e;box-shadow:0 0 8px #22c55e}' + EOL
-+ '.status{font-size:12px;color:#94a3b8;margin-left:auto}' + EOL
-+ 'main{padding:16px;display:flex;gap:18px;align-items:flex-start;justify-content:center;flex-wrap:wrap}' + EOL
-+ '.stage{border:1px solid #1e293b;border-radius:22px;padding:10px;background:#0a1424;box-shadow:0 20px 60px rgba(0,0,0,.5)}' + EOL
-+ 'canvas{display:block;width:336px;height:480px;border-radius:14px;background:#000;cursor:crosshair}' + EOL
-+ '.hint{font-size:12px;color:#64748b;max-width:360px;line-height:1.7;margin:10px 0 0;text-align:center}' + EOL
-+ '.side{display:flex;flex-direction:column;gap:8px;min-width:170px}' + EOL
-+ 'button{background:#1e293b;color:#dbe6f5;border:1px solid #334155;border-radius:9px;padding:9px 12px;font-size:13px;cursor:pointer}' + EOL
-+ 'button:hover{background:#273449;border-color:#475569}' + EOL
-+ 'button:active{transform:translateY(1px)}' + EOL
-+ '.k{font-size:11px;color:#64748b;line-height:1.6;margin-top:4px}' + EOL
-+ '.err{color:#f87171;font-size:12px;max-width:340px}' + EOL
-+ '</style></head>' + EOL
-+ '<body>' + EOL
-+ '<header><span class="dot" id="dot"></span><h1>Vela 模拟器面板 · 336×480</h1><span class="status" id="status">连接中…</span></header>' + EOL
-+ '<main><div><div class="stage"><canvas id="cv" width="336" height="480"></canvas></div>' + EOL
-+ '<p class="hint">点击 / 拖拽画布 = 真实鼠标事件注入（Vela 镜像下 sendTouch 无效，sendMouse 有效，已用点击计数应用验证）。</p></div>' + EOL
-+ '<div class="side">' + EOL
-+ '<button id="btn-restart">重启应用</button>' + EOL
-+ '<button id="btn-reload">重装当前 rpk</button>' + EOL
-+ '<button id="btn-snap">保存当前帧</button>' + EOL
-+ '<div class="k">面板通过官方 Vela 模拟器 gRPC 实时取帧（约 4 fps）；重启/重装走本地 adb。</div>' + EOL
-+ '<div class="err" id="err"></div></div></main>' + EOL
-+ '<script>' + EOL
-+ 'var cv=document.getElementById("cv"),ctx=cv.getContext("2d"),dot=document.getElementById("dot"),st=document.getElementById("status"),err=document.getElementById("err");' + EOL
-+ 'var img=new Image();img.onload=function(){cv.width=img.width;cv.height=img.height;ctx.drawImage(img,0,0);};' + EOL
-+ 'var last=0;var es=new EventSource("api/stream");' + EOL
-+ 'es.onmessage=function(e){try{var d=JSON.parse(e.data);img.src="data:image/png;base64,"+d.img;dot.classList.add("on");var t=performance.now();var fps=(last&&t>last)?" · "+(1000/(t-last)).toFixed(1)+" fps":"";st.textContent="已连接"+fps+" · 帧 #"+d.seq;last=t;}catch(x){}};' + EOL
-+ 'es.onerror=function(){dot.classList.remove("on");st.textContent="连接中断，重试中…";};' + EOL
-+ 'function post(u,b){u=String(u).replace(/^\\//,"");return fetch(u,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b)}).then(function(r){if(!r.ok)return r.text().then(function(t){err.textContent="失败: "+t;});err.textContent="";return null;});}' + EOL
-+ 'function pt(ev){var r=cv.getBoundingClientRect();return {x:(ev.clientX-r.left)*(cv.width/r.width),y:(ev.clientY-r.top)*(cv.height/r.height)};}' + EOL
-+ 'cv.addEventListener("pointerdown",function(ev){var p=pt(ev);cv.setPointerCapture(ev.pointerId);post("/api/mouse",{x:p.x,y:p.y,buttons:1});});' + EOL
-+ 'cv.addEventListener("pointermove",function(ev){if(ev.buttons){var p=pt(ev);post("/api/mouse",{x:p.x,y:p.y,buttons:1});}});' + EOL
-+ 'cv.addEventListener("pointerup",function(ev){var p=pt(ev);post("/api/mouse",{x:p.x,y:p.y,buttons:0});});' + EOL
-+ 'cv.addEventListener("pointercancel",function(ev){var p=pt(ev);post("/api/mouse",{x:p.x,y:p.y,buttons:0});});' + EOL
-+ 'document.getElementById("btn-restart").onclick=function(){post("/api/action",{name:"restart"});};' + EOL
-+ 'document.getElementById("btn-reload").onclick=function(){post("/api/action",{name:"reload"});};' + EOL
-+ 'document.getElementById("btn-snap").onclick=function(){var a=document.createElement("a");a.href=cv.toDataURL("image/png");a.download="vela-frame.png";a.click();};' + EOL
-+ '</script></body></html>';
+const PAGE = fs.readFileSync(path.join(__dirname, 'panel-ui.html'), 'utf8');
 
 function readBody(req, cb) {
   let body = '';
@@ -149,7 +103,7 @@ function readBody(req, cb) {
   req.on('end', () => cb(body));
 }
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (req.method === 'GET' && url.pathname === '/') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
@@ -162,6 +116,16 @@ const server = http.createServer((req, res) => {
     if (lastPng) res.write('data: ' + JSON.stringify({ seq, img: lastPng.toString('base64') }) + NL2);
     sseClients.add(res);
     req.on('close', () => sseClients.delete(res));
+    return;
+  }
+  if (req.method === 'GET' && url.pathname === '/api/status') {
+    let booted = false;
+    try {
+      const st = await call(client.getStatus, ctl.EmulatorStatus);
+      booted = Boolean(st && st.booted);
+    } catch (e) { booted = false; }
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ emulator: SN, grpcPort: cfg['grpc.port'], booted, seq, lastError, up: true }));
     return;
   }
   if (req.method === 'GET' && url.pathname === '/api/frame') {
@@ -186,7 +150,12 @@ const server = http.createServer((req, res) => {
       try {
         const b = JSON.parse(body || '{}');
         let out = '';
-        if (b.name === 'restart') {
+        if (b.name === 'wake') {
+          await call(client.sendMouse, { x: 168, y: 240, buttons: 1, display: 0 });
+          await new Promise((r) => setTimeout(r, 120));
+          await call(client.sendMouse, { x: 168, y: 240, buttons: 0, display: 0 });
+          out = 'wake sent';
+        } else if (b.name === 'restart') {
           await adb(['shell', 'am', 'force-stop', PKG]);
           out = (await adb(['shell', 'am', 'start', PKG])).out;
         }
