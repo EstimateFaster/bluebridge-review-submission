@@ -129,10 +129,10 @@ const PAGE = '<!DOCTYPE html>' + EOL
 + '<script>' + EOL
 + 'var cv=document.getElementById("cv"),ctx=cv.getContext("2d"),dot=document.getElementById("dot"),st=document.getElementById("status"),err=document.getElementById("err");' + EOL
 + 'var img=new Image();img.onload=function(){cv.width=img.width;cv.height=img.height;ctx.drawImage(img,0,0);};' + EOL
-+ 'var last=0;var es=new EventSource("/api/stream");' + EOL
++ 'var last=0;var es=new EventSource("api/stream");' + EOL
 + 'es.onmessage=function(e){try{var d=JSON.parse(e.data);img.src="data:image/png;base64,"+d.img;dot.classList.add("on");var t=performance.now();var fps=(last&&t>last)?" · "+(1000/(t-last)).toFixed(1)+" fps":"";st.textContent="已连接"+fps+" · 帧 #"+d.seq;last=t;}catch(x){}};' + EOL
 + 'es.onerror=function(){dot.classList.remove("on");st.textContent="连接中断，重试中…";};' + EOL
-+ 'function post(u,b){return fetch(u,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b)}).then(function(r){if(!r.ok)return r.text().then(function(t){err.textContent="失败: "+t;});err.textContent="";return null;});}' + EOL
++ 'function post(u,b){u=String(u).replace(/^\\//,"");return fetch(u,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b)}).then(function(r){if(!r.ok)return r.text().then(function(t){err.textContent="失败: "+t;});err.textContent="";return null;});}' + EOL
 + 'function pt(ev){var r=cv.getBoundingClientRect();return {x:(ev.clientX-r.left)*(cv.width/r.width),y:(ev.clientY-r.top)*(cv.height/r.height)};}' + EOL
 + 'cv.addEventListener("pointerdown",function(ev){var p=pt(ev);cv.setPointerCapture(ev.pointerId);post("/api/mouse",{x:p.x,y:p.y,buttons:1});});' + EOL
 + 'cv.addEventListener("pointermove",function(ev){if(ev.buttons){var p=pt(ev);post("/api/mouse",{x:p.x,y:p.y,buttons:1});}});' + EOL

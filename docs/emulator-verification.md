@@ -96,6 +96,10 @@ node tools/emulator-shot.cjs emu-01-main.png
 node tools/emulator-panel.cjs        # 打开 http://127.0.0.1:8770/
 ```
 
+- 访问方式（本机服务器经 nginx 对外，只开放 55555/TLS）：
+  - 域名入口：`https://dsh.inklog.xx.kg/emu-panel/`（与 DSH 共用登录 cookie，未登录会跳登录页）
+  - IP 兜底入口：`https://103.236.84.174:45665/emu-panel/`（nginx basic auth，凭据同 DSH）
+  - nginx 反代配置：`/etc/nginx/sites-available/dsh-webui` 中 `location ^~ /emu-panel/` → `127.0.0.1:8770`（改动前已备份为同目录 `.bak-*` 文件）；验证：带登录 cookie 请求页面返回 200、`/emu-panel/api/frame` 返回 336×480 PNG、SSE 返回 `text/event-stream`；
 - 画面：服务端每 250ms 调 gRPC `getScreenshot`，变化才推送（SSE），前端 canvas 渲染；
 - 点击/拖拽：POST `/api/mouse` → gRPC `sendMouse`（按下 buttons=1 / 抬起 buttons=0）；
 - 按钮：重启应用、重装当前 rpk、保存当前帧（走本地 adb）；
@@ -120,4 +124,5 @@ node tools/emulator-panel.cjs        # 打开 http://127.0.0.1:8770/
 1. 主机无 GPU，使用 SwiftShader 软件渲染；且 guest 是 ARM（x86 主机走 QEMU TCG），**帧率/性能不代表真机**，但布局、字体、颜色、组件行为与真实 Vela 运行时一致；
 2. 使用 Vela 5.0 镜像（`vela-watch-5.0`），真机系统版本可能略有差异；
 3. 本记录证明「能构建、能安装、能启动、能渲染」；最终评分仍建议评审在 AIoT-IDE/真机上复核一次；
-4. 模拟器与 SDK 均从小米官方下载源获取，仅用于验证，不随提交物分发。
+4. 模拟器与 SDK 均从小米官方下载源获取，仅用于验证，不随提交物分发；
+5. 安全：模拟器 gRPC（8554）默认监听 0.0.0.0 且无鉴权，已用 iptables 限制为仅 loopback 可访问（规则为运行时规则，重启后需重新添加；`iptables -L INPUT -n --line-numbers` 可核对）。

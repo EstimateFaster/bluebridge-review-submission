@@ -14,7 +14,7 @@
 | 设计预览（辅助） | `screenshots/design-preview-*.png`（同源 HTML 渲染，用于快速迭代） |
 | 资产生成脚本 | `assets/gen_assets.py`（背景、天气图标、指标图标、应用图标全部本地生成） |
 | 模拟器脚本 | `tools/emulator-run.cjs`（创建 VVD + 启动 + 安装 rpk）、`tools/emulator-shot.cjs`（gRPC 抓真实截图） |
-| 交互面板 | `tools/emulator-panel.cjs`（浏览器实时看画面 + 点击/拖拽注入 + 重启/重装），见 `docs/emulator-verification.md` |
+| 交互面板 | `tools/emulator-panel.cjs`（浏览器实时看画面 + 点击/拖拽注入 + 重启/重装）；本机经 nginx 暴露为 `https://dsh.inklog.xx.kg/emu-panel/`，详见 `docs/emulator-verification.md` |
 | 预览渲染脚本 | `tools/render-preview.cjs` + `tools/screenshot.cjs`（同源 HTML 渲染，快速迭代用） |
 | 调研笔记 | `docs/research/`（官方文档要点、336×480 UI 规范、决策记录） |
 
@@ -39,7 +39,7 @@ node tools/emulator-run.cjs      # 创建 VVD + 启动模拟器 + 安装并启�
 node tools/emulator-shot.cjs emu-01-main.png   # 任意时刻抓真实截图（gRPC，336×480）
 
 # 5. 可选：浏览器交互面板（实时画面 + 点击测试）
-node tools/emulator-panel.cjs    # 打开 http://127.0.0.1:8770/
+node tools/emulator-panel.cjs    # 本机 http://127.0.0.1:8770/；服务器上经 nginx 反代为 /emu-panel/
 #    - 点击/拖拽画布 = 真实鼠标事件注入（已在点击计数测试应用上验证有效）
 #    - 按钮：重启应用 / 重装当前 rpk / 保存当前帧
 ```
