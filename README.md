@@ -204,3 +204,12 @@ node tools/emulator-panel.cjs    # 本机 http://127.0.0.1:8770/；服务器上�
 | `screenshots/emu-task1-main@2x.png` | 2× 放大，便于查看字体/图标细节 |
 
 复验细节（安装命令、adb 注意点、面板状态）见 `docs/emulator-verification.md` 第九节。面板入口：`https://103.236.84.174:45665/emu-panel/`（Basic Auth）或 DSH 域名下 `/emu-panel/`。
+
+顶栏新增两个实机验证过的入口：
+
+| 位置 | 交互 | 实现 |
+|---|---|---|
+| 左上 `‹` | 退出快应用（失败回退返回键 + toast） | `@system.app` terminate / `@system.router` |
+| 右上 `⋯` | 打开「开发者信息」页内覆盖层（包名/版本/设备/系统版本/屏幕/框架），`×` 或点遮罩关闭 | `@system.device` getInfo + 页内条件渲染 |
+
+演示截图：[主屏](screenshots/emu-task1-main.png) · [开发者信息](screenshots/emu-task1-dev.png)

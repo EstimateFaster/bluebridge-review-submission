@@ -5,11 +5,17 @@
     <div class="content">
       <!-- 顶部：地区 + 风向 -->
       <div class="topbar">
+        <div class="hbtn" onclick="onExit">
+          <image class="hicon" src="/common/weather/hdr-back.png"></image>
+        </div>
         <div class="city-wrap">
           <image class="pin" src="/common/weather/m-location.png"></image>
           <text class="city">北京 · 朝阳</text>
         </div>
         <text class="wind">东南风 2级</text>
+        <div class="hbtn hbtn-right" onclick="onMore">
+          <image class="hicon" src="/common/weather/hdr-more.png"></image>
+        </div>
       </div>
 
       <!-- 主视觉：温度 + 天气图标 -->
@@ -109,6 +115,22 @@
         </div>
       </div>
     </div>
+
+    <!-- 开发者信息（右上角 ⋯ 打开） -->
+    <div class="dev-mask" if="{{showDev}}" onclick="onCloseDev">
+      <div class="dev-card" onclick="stopProp">
+        <div class="dev-head">
+          <text class="dev-title">开发者信息</text>
+          <div class="dev-close" onclick="onCloseDev"><text class="dev-close-x">×</text></div>
+        </div>
+        <div class="dev-row"><text class="dev-k">包名</text><text class="dev-v">com.bluebridge.review.weather</text></div>
+        <div class="dev-row"><text class="dev-k">版本</text><text class="dev-v">1.0.0 (1)</text></div>
+        <div class="dev-row"><text class="dev-k">设备</text><text class="dev-v">{{model}}</text></div>
+        <div class="dev-row"><text class="dev-k">系统版本</text><text class="dev-v">{{apiLevel}}</text></div>
+        <div class="dev-row"><text class="dev-k">屏幕</text><text class="dev-v">336 × 480 / designWidth 336</text></div>
+        <div class="dev-row"><text class="dev-k">框架</text><text class="dev-v">Vela 快应用</text></div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -141,10 +163,88 @@
 /* ---------- 顶部 ---------- */
 .topbar {
   width: 304px;
-  height: 24px;
+  height: 30px;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
+}
+.hbtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  background-color: rgba(255, 255, 255, 0.08);
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hbtn-right {
+  margin-left: 6px;
+}
+.hicon {
+  width: 18px;
+  height: 18px;
+}
+/* ---------- 开发者信息 ---------- */
+.dev-mask {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 336px;
+  height: 480px;
+  background-color: rgba(3, 8, 18, 0.72);
+  align-items: center;
+  justify-content: center;
+}
+.dev-card {
+  width: 284px;
+  background-color: #101d33;
+  border-width: 1px;
+  border-color: rgba(255, 255, 255, 0.10);
+  border-radius: 16px;
+  padding: 12px 16px 14px 16px;
+  flex-direction: column;
+}
+.dev-head {
+  height: 28px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.dev-title {
+  font-size: 19px;
+  line-height: 24px;
+  font-weight: bold;
+  color: #f1f5f9;
+}
+.dev-close {
+  width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  background-color: rgba(255, 255, 255, 0.08);
+  align-items: center;
+  justify-content: center;
+}
+.dev-close-x {
+  font-size: 18px;
+  line-height: 20px;
+  color: #a8b6cc;
+}
+.dev-row {
+  height: 22px;
+  margin-top: 4px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.dev-k {
+  font-size: 14px;
+  line-height: 18px;
+  color: #8b9bb4;
+}
+.dev-v {
+  font-size: 14px;
+  line-height: 18px;
+  color: #e2e8f0;
 }
 .city-wrap {
   flex-direction: row;
@@ -171,7 +271,7 @@
 .hero {
   width: 304px;
   height: 104px;
-  margin-top: 4px;
+  margin-top: 0;
   flex-direction: row;
   justify-content: space-between;
   align-items: flex-end;
@@ -225,7 +325,7 @@
 .metrics {
   width: 304px;
   height: 58px;
-  margin-top: 8px;
+  margin-top: 4px;
   flex-direction: row;
   justify-content: space-between;
 }
@@ -441,8 +541,17 @@
 </style>
 
 <script>
+import app from '@system.app'
+import router from '@system.router'
+import device from '@system.device'
+import vibrator from '@system.vibrator'
+import prompt from '@system.prompt'
+
 export default {
   data: {
+    showDev: false,
+    model: 'Vela 模拟器',
+    apiLevel: '—',
     hours: [
       { time: '现在', icon: '/common/weather/w-partly.png', temp: 23 },
       { time: '15时', icon: '/common/weather/w-cloudy.png', temp: 22 },
@@ -460,6 +569,39 @@ export default {
       { day: '周三', icon: '/common/weather/w-rain.png', high: 24, low: 15 }
     ]
   },
-  onInit() {}
+  onInit() {
+    try {
+      device.getInfo({
+        success: (info) => {
+          const d = info || {}
+          this.model = d.model || d.product || d.brand || 'Vela 模拟器'
+          this.apiLevel = String(d.apiLevel || d.api || d.platformVersionName || '5.0')
+        },
+        fail: () => {}
+      })
+    } catch (e) {}
+  },
+  onExit() {
+    try { vibrator.vibrate({ duration: 15 }) } catch (e) {}
+    let exited = false
+    try {
+      if (app && typeof app.terminate === 'function') {
+        app.terminate()
+        exited = true
+      }
+    } catch (e) {}
+    if (!exited) {
+      try { router.back() } catch (e) {}
+      try { prompt.showToast({ message: '已退出天气' }) } catch (e) {}
+    }
+  },
+  onMore() {
+    try { vibrator.vibrate({ duration: 10 }) } catch (e) {}
+    this.showDev = true
+  },
+  onCloseDev() {
+    this.showDev = false
+  },
+  stopProp() {}
 }
 </script>

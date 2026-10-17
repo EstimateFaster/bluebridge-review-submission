@@ -137,3 +137,10 @@ node tools/emulator-panel.cjs        # 打开 http://127.0.0.1:8770/
 - 抓帧：gRPC `getScreenshot` 返回 336×480 PNG，与真机画面一致；面板 `/api/status` 显示 `booted:true / up:true`，`/api/frame` 返回 HTTP 200 + 70498 B PNG。
 - 实测画面：`screenshots/emu-task1-main.png`（336×480 原始）、`screenshots/emu-task1-main@2x.png`（2× 放大）。9 项信息一屏可见、无裁切：地区/温度/湿度/未来 5 小时/未来 7 天/空气/紫外线/风向/日出日落；底部 06:28 / 17:26 完整显示。
 - 已知：屏幕会熄屏（首次点击唤醒）；Vela 单应用限制下切换应用建议重启 VVD；宿主无 GPU，性能不代表真机。
+
+**顶栏交互复验（同版本 v1 + ‹/⋯）**：安装 `vela-weather-336x480.debug.rpk`（md5 `7692bbe5db45bf592db8c5f47c2ec29c`）后 reboot VVD，`am start` 冷启动；
+- 左上 `‹` 点击后应用退出（抓帧 1,650 B 近黑，桌面/灭屏）；
+- 右上 `⋯` 打开开发者信息（包名/版本/设备 Emulator-Vela/系统版本 1.2.0/336×480），`×` 关闭后主屏逐字节还原（70,955 B）；
+- 截图：`screenshots/emu-task1-main.png`、`emu-task1-dev.png`、`emu-task1-exit.png`。
+
+**注意**：`pm install` 不能带 `-r`（Vela 5 返回 `Failed to deal with rpkpackage -38`），直接 `pm install <rpk>` 返回 `(success 0)`；`am start` 在应用已运行时可能只打印 usage，最稳妥是 `adb shell reboot` 后 `am start <包名>`。
