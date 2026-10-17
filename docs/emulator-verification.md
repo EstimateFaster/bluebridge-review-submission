@@ -128,3 +128,12 @@ node tools/emulator-panel.cjs        # 打开 http://127.0.0.1:8770/
 3. 本记录证明「能构建、能安装、能启动、能渲染」；最终评分仍建议评审在 AIoT-IDE/真机上复核一次；
 4. 模拟器与 SDK 均从小米官方下载源获取，仅用于验证，不随提交物分发；
 5. 安全：模拟器 gRPC（8554）默认监听 0.0.0.0 且无鉴权，已用 iptables 限制为仅 loopback 可访问（规则为运行时规则，重启后需重新添加；`iptables -L INPUT -n --line-numbers` 可核对）。
+
+## 九、2026-10-17 11:29 复验（题 1 交付版）
+
+- 模拟器：VVD `VelaWeather`（336×480 / rect / density 320 / Vela 5.0 arm 镜像），QEMU + SwiftShader headless，gRPC 8554、adb 5554。
+- 安装方式：`adb push <rpk> /data/local/tmp/` → `adb shell pm install -r`（也可用 `tools/emulator-run.cjs` 的 pushRpk/install 流程；注意直接 `adb install xxx.rpk` 会因扩展名被拒，需先改名为 .apk 或走 pm install）。
+- 启动：`am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER com.bluebridge.review.weather`，日志确认 `pages/index` onReady/onShow、`onResume`。
+- 抓帧：gRPC `getScreenshot` 返回 336×480 PNG，与真机画面一致；面板 `/api/status` 显示 `booted:true / up:true`，`/api/frame` 返回 HTTP 200 + 70498 B PNG。
+- 实测画面：`screenshots/emu-task1-main.png`（336×480 原始）、`screenshots/emu-task1-main@2x.png`（2× 放大）。9 项信息一屏可见、无裁切：地区/温度/湿度/未来 5 小时/未来 7 天/空气/紫外线/风向/日出日落；底部 06:28 / 17:26 完整显示。
+- 已知：屏幕会熄屏（首次点击唤醒）；Vela 单应用限制下切换应用建议重启 VVD；宿主无 GPU，性能不代表真机。

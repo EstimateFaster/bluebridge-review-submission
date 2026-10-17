@@ -193,3 +193,14 @@ node tools/emulator-panel.cjs    # 本机 http://127.0.0.1:8770/；服务器上�
 - 调试签名使用 aiot-toolkit 内置证书，仅够模拟器/真机调试，不可用于正式发布；
 - 模拟器 SDK（约 450MB）不随提交物分发，复现方式见 `docs/emulator-verification.md`；
 - 交互面板是本地开发工具（仅监听 127.0.0.1:8770，约 4fps 轮询），不是 DSH 插件；受 Vela 镜像限制：鼠标注入有效、`sendTouch` 无效、键盘事件无响应；同一时刻只运行一个快应用（切换不同应用时 adb `am start` 可能阻塞，需重启 VVD）。
+
+## 十、真实模拟器复验（2026-10-17 11:29）
+
+官方 Vela 5.0 模拟器（VVD 336×480）安装并启动本题 rpk 后，gRPC 抓帧确认 9 项信息一屏完整呈现、底部日出日落（06:28 / 17:26）无裁切：
+
+| 文件 | 说明 |
+|---|---|
+| `screenshots/emu-task1-main.png` | 336×480 原始帧 |
+| `screenshots/emu-task1-main@2x.png` | 2× 放大，便于查看字体/图标细节 |
+
+复验细节（安装命令、adb 注意点、面板状态）见 `docs/emulator-verification.md` 第九节。面板入口：`https://103.236.84.174:45665/emu-panel/`（Basic Auth）或 DSH 域名下 `/emu-panel/`。
