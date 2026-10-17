@@ -13,7 +13,7 @@
 | 模拟器真实截图 | `screenshots/emu-task1-main.png`（336×480 主屏）、`@2x` 放大版、`emu-task1-hours-scroll.png`（5 小时横滑后）、`emu-task1-metrics-scroll.png`（指标横滑到「风向」）、`emu-task1-dev.png`（开发者信息）、`emu-task1-rightswipe.png`（右滑不退出）、`emu-task1-exit.png`（‹ 退出后） |
 | 资产生成脚本 | `assets/gen_assets.py`（背景、天气图标、指标图标、应用图标全部本地生成） |
 | 模拟器脚本 | `tools/emulator-run.cjs`（创建 VVD + 启动 + 安装 rpk）、`tools/emulator-shot.cjs`（gRPC 抓真实截图） |
-| 交互面板 | `tools/emulator-panel.cjs` + `tools/panel-ui.html`（移动端自适应；画布拖拽已锁定不带动网页；实时画面 + 点击/拖拽注入 + 唤醒/重启/重装/截图/全屏/状态/坐标/日志）；本机经 nginx 暴露为 `https://dsh.inklog.xx.kg/emu-panel/`，详见 `docs/emulator-verification.md` |
+| 交互面板 | `tools/emulator-panel.cjs` + `tools/panel-ui.html`（移动端自适应；画布手势录制 + 服务端 60Hz gRPC 回放，点击/拖拽/横滑可用；实时画面 + 唤醒/重启/重装/截图/全屏/状态/动作日志，`/api/logs` 可查）；本机经 nginx 暴露为 `/emu-panel/`，详见 `docs/emulator-verification.md` 第十节 |
 | 预览渲染脚本 | `tools/render-preview.cjs` + `tools/screenshot.cjs`（同源 HTML 渲染，快速迭代用） |
 | 调研笔记 | `docs/research/`（官方文档要点、336×480 UI 规范、决策记录） |
 
@@ -192,7 +192,7 @@ node tools/emulator-panel.cjs    # 本机 http://127.0.0.1:8770/；服务器上�
 - 使用 Vela 5.0 镜像（`vela-watch-5.0`），真机系统版本可能略有差异，建议评审在真机/ AIoT-IDE 复核一次；
 - 调试签名使用 aiot-toolkit 内置证书，仅够模拟器/真机调试，不可用于正式发布；
 - 模拟器 SDK（约 450MB）不随提交物分发，复现方式见 `docs/emulator-verification.md`；
-- 交互面板是本地开发工具（仅监听 127.0.0.1:8770，约 4fps 轮询），不是 DSH 插件；Vela 5.0 镜像下鼠标「按下→移动→抬起」可模拟滑动（已用它验证横滑），`sendTouch`/`sendKey` 无效；同一时刻只运行一个快应用（切换不同应用时 adb `am start` 可能阻塞，需重启 VVD 后再启动）。
+- 交互面板是本地开发工具（仅监听 127.0.0.1:8770，约 4fps 轮询），不是 DSH 插件；已升级为**手势回放**：手机端录制路径 → 服务端按 60Hz 用官方 gRPC `sendMouse`（down→move→up）回放，点击/拖拽/横滑均实测有效，动作日志 `/tmp/vela-panel-actions.log`；Vela 5.0 镜像的 `sendTouch` 各种编码均无响应、`sendKey` 无效，故不采用；同一时刻只运行一个快应用（切换不同应用时 adb `am start` 可能阻塞，需重启 VVD 后再启动）。
 
 ## 十、真实模拟器复验（2026-10-17 11:48，终版）
 

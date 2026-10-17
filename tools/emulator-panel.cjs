@@ -59,6 +59,45 @@ if (cfg['grpc.token']) meta.set('Authorization', 'Bearer ' + cfg['grpc.token']);
 const call = (fn, req) => new Promise((resolve, reject) => fn.call(client, req, meta, (e, r) => (e ? reject(e) : resolve(r))));
 const mouse = (x, y, buttons) => call(client.sendMouse, { x: Math.round(x), y: Math.round(y), buttons, display: 0 });
 
+/* ---------- 手势回放（官方 gRPC sendMouse 的按下/移动/抬起序列） ----------
+   Vela 5.0 镜像实测：sendTouch 各编码变体均无响应；sendMouse 会被 Vela 运行时当作
+   指针/触摸事件处理（点击、横向拖动滚动均有效）。因此面板把手势录制成路径后在
+   服务端按 60Hz 回放，手机端只发一次请求，避免每帧往返造成丢帧/卡顿。 */
+const ACTION_LOG = '/tmp/vela-panel-actions.log';
+function logAction(kind, detail) {
+  try { fs.appendFileSync(ACTION_LOG, new Date().toISOString() + ' ' + kind + ' ' + JSON.stringify(detail) + EOL); } catch (e) {}
+}
+const clampX = (v) => Math.max(0, Math.min(335, Math.round(Number(v) || 0)));
+const clampY = (v) => Math.max(0, Math.min(479, Math.round(Number(v) || 0)));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function replayGesture(points) {
+  const src = Array.isArray(points) ? points : [];
+  const pts = src.map((p) => ({ x: clampX(p && p.x), y: clampY(p && p.y) })).filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+  if (!pts.length) throw new Error('empty gesture');
+  logAction('gesture', { points: pts.length, start: pts[0], end: pts[pts.length - 1] });
+  await mouse(pts[0].x, pts[0].y, 1);
+  if (pts.length === 1) {
+    await sleep(90);
+    await mouse(pts[0].x, pts[0].y, 0);
+    return { points: 1, type: 'tap' };
+  }
+  let prev = pts[0];
+  await sleep(14);
+  for (let i = 1; i < pts.length; i++) {
+    const p = pts[i];
+    const dist = Math.hypot(p.x - prev.x, p.y - prev.y);
+    const steps = Math.max(1, Math.min(4, Math.round(dist / 6)));
+    for (let s = 1; s <= steps; s++) {
+      await mouse(prev.x + ((p.x - prev.x) * s) / steps, prev.y + ((p.y - prev.y) * s) / steps, 1);
+      await sleep(12);
+    }
+    prev = p;
+  }
+  await sleep(14);
+  await mouse(pts[pts.length - 1].x, pts[pts.length - 1].y, 0);
+  return { points: pts.length, type: 'swipe' };
+}
+
 function adb(args, timeoutMs) {
   return new Promise((resolve) => {
     const ps = spawn(ADB, ['-s', SN].concat(args));
@@ -125,7 +164,11 @@ const server = http.createServer(async (req, res) => {
       booted = Boolean(st && st.booted);
     } catch (e) { booted = false; }
     res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ emulator: SN, grpcPort: cfg['grpc.port'], booted, seq, lastError, up: true }));
+    res.end(JSON.stringify({
+      emulator: SN, grpcPort: cfg['grpc.port'], booted, seq, lastError, up: true,
+      panelVersion: '1.1.0', injection: 'pointer-gesture-replay', touchSupported: false,
+      actionLog: ACTION_LOG, hint: '拖动 = 录路径 + 服务端回放 sendMouse（Vela 5.0 镜像 sendTouch 无响应）'
+    }));
     return;
   }
   if (req.method === 'GET' && url.pathname === '/api/frame') {
@@ -138,6 +181,7 @@ const server = http.createServer(async (req, res) => {
     readBody(req, async (body) => {
       try {
         const b = JSON.parse(body || '{}');
+        logAction('mouse', { x: b.x, y: b.y, buttons: b.buttons ? 1 : 0 });
         await mouse(Number(b.x) || 0, Number(b.y) || 0, b.buttons ? 1 : 0);
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end('{"ok":true}');
@@ -169,6 +213,24 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ ok: true, out: out.slice(0, 2000) }));
       } catch (e) { res.writeHead(500); res.end(String(e.message || e)); }
     });
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/gesture') {
+    readBody(req, async (body) => {
+      try {
+        const b = JSON.parse(body || '{}');
+        const info = await replayGesture(b.points);
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, info }));
+      } catch (e) { res.writeHead(500); res.end(String(e.message || e)); }
+    });
+    return;
+  }
+  if (req.method === 'GET' && url.pathname === '/api/logs') {
+    let text = '';
+    try { text = fs.readFileSync(ACTION_LOG, 'utf8').split(EOL).filter(Boolean).slice(-80).join(EOL); } catch (e) {}
+    res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
+    res.end(text);
     return;
   }
   res.writeHead(404); res.end('not found');

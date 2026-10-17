@@ -151,3 +151,27 @@ node tools/emulator-panel.cjs        # 打开 http://127.0.0.1:8770/
 - 右滑（左→右拖）不退出：横滑容器消费手势，页面 `onBackPress` 返回 `true` 兜底；
 - `‹` 点击退出（近黑帧 1,650 B）、`⋯` 打开/关闭开发者信息正常；
 - 截图：`emu-task1-main.png`、`hours-scroll.png`、`metrics-scroll.png`、`dev.png`、`rightswipe.png`、`exit.png`。
+
+## 十、Vela 模拟器配置审计 & 触屏注入结论（2026-10-17 12:15）
+
+**VVD 配置（官方镜像 + 官方 SDK，无任何第三方 fork）**：
+
+| 项 | 值 | 说明 |
+|---|---|---|
+| 镜像 | `vela-watch-5.0/20250716` | 小米官方模拟器源 `vela-ide.cnbj3-fusion.mi-fds.com` |
+| 屏幕 | 336×480 / `hw.lcd.density=320` / shape=rect | 与手环 10 Pro 一致；designWidth=336 → 1 设计 px = 1 物理像素 |
+| CPU | `hw.cpu.ncore=4`（QEMU TCG，宿主 x86 跑 ARM guest） | 无 KVM 加速，属官方支持的软件模拟路径 |
+| 内存 | `hw.ramSize=1024` | 官方默认；本应用常驻 < 30MB，1GB 足够，调大不会提升帧率 |
+| GPU | `hw.gpu.enabled=no` + `-no-window` | headless 下官方默认软件渲染；Vela UI 在 guest 内合成，无 GPU 也能真实出帧 |
+| 启动 | `-no-window -grpc 8554 -show-kernel` | 与 AIoT-IDE 启动的 VVD 参数一致；adb 5554 / gRPC 8554 |
+
+**触屏注入实测（这是关键结论）**：官方 `emulator_controller.proto` 里同时存在 `sendTouch(TouchEvent)` 与 `sendMouse(MouseEvent)`，但对 `vela-watch-5.0` 镜像：
+- `sendTouch`（单指 pressure 200/0、identifier、touch_major/minor、NEVER_EXPIRE、display=0 多种编码）**全部无响应**，点击 ⋯ 按钮、拖动列表都不生效（截图逐字节不变）；
+- `sendMouse`（buttons 1 → 移动 → buttons 0）**被 Vela 运行时当作指针/触摸事件处理**：点击可打开覆盖层，按下-移动-抬起可让 `scroll-x` 横向滚动；右滑（从左往右拖）不会退出应用。
+- 结论：不是面板坐标算错，而是该镜像的输入链路只消费指针事件。面板因此以官方 gRPC `sendMouse` 为唯一注入通道，属于「以官方为基底」的等价触摸实现。
+
+**面板手势回放（v1.1.0）**：手机端画布 `pointerdown→pointermove→pointerup` 录制成坐标路径，一次性 POST `/api/gesture`；服务端校验/钳制到 0–335、0–479 后按 60Hz 插值回放（先 down，再逐点 sendMouse(buttons=1)，最后 up），避免手机上逐帧 HTTP 往返丢事件。点击（单点路径）自动退化为 down→90ms→up 的点按。所有动作写 `/tmp/vela-panel-actions.log`，`GET /api/logs` 可查；`/api/status` 返回 `injection/touchSupported/panelVersion`。
+
+**实测**：`POST /api/gesture {points:[{x:304,y:24}]}` → 开发者信息覆盖层打开；7 点水平拖拽 → 5 小时行滚动到 17–21 时；日志三条记录均可查。
+
+**资源清理**：清掉 4 个遗留的 `emulator-run.cjs` 常驻进程（约 330MB RSS）、`npm cache`（624MB）、已废弃的 v2 工程目录；清理后 `free -m` 已用约 1.17GB / 7.9GB，可用 6.7GB，模拟器与面板均保持运行。

@@ -51,7 +51,7 @@ button.wide { grid-column: span 2; }
 <main>
   <section class="stage-wrap">
     <div class="stage"><canvas id="cv" width="336" height="480"></canvas></div>
-    <p class="hint">画布上直接点击 / 拖拽 = 屏幕触摸（已阻止页面滚动）；左右拖动不会带动网页。</p>
+    <p class="hint">画布上点击 = 点按，拖拽 = 滑动（手势在服务端按 60Hz 回放，不会带动网页滚动）；点按/滑动均走官方 gRPC，等价触摸。</p>
   </section>
   <aside class="ops">
     <div class="grid">
@@ -108,11 +108,32 @@ es.onmessage = function (e) {
 es.onerror = function () { dot.classList.remove('on'); st.textContent = '连接中断，重试中…'; dConn.textContent = '断开'; };
 function pt(ev) { var r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) * (cv.width / r.width), y: (ev.clientY - r.top) * (cv.height / r.height) }; }
 function move(p, buttons) { return post('api/mouse', { x: p.x, y: p.y, buttons: buttons }); }
-var dragging = false;
-cv.addEventListener('pointerdown', function (ev) { ev.preventDefault(); dragging = true; if (cv.setPointerCapture) cv.setPointerCapture(ev.pointerId); var p = pt(ev); dTap.textContent = Math.round(p.x) + ', ' + Math.round(p.y); move(p, 1); });
-cv.addEventListener('pointermove', function (ev) { if (!dragging) return; ev.preventDefault(); move(pt(ev), 1); });
-cv.addEventListener('pointerup', function (ev) { if (!dragging) return; dragging = false; ev.preventDefault(); move(pt(ev), 0); });
-cv.addEventListener('pointercancel', function (ev) { if (!dragging) return; dragging = false; move(pt(ev), 0); });
+var dragging = false, dragPts = [], lastPt = null, dragStart = 0;
+function rec(p) {
+  var r = { x: Math.round(p.x), y: Math.round(p.y) };
+  if (!lastPt || Math.abs(r.x - lastPt.x) >= 1 || Math.abs(r.y - lastPt.y) >= 1) {
+    dragPts.push(r); lastPt = r;
+    dTap.textContent = r.x + ', ' + r.y;
+  }
+}
+cv.addEventListener('pointerdown', function (ev) {
+  ev.preventDefault();
+  dragging = true; dragPts = []; lastPt = null; dragStart = Date.now();
+  if (cv.setPointerCapture) cv.setPointerCapture(ev.pointerId);
+  rec(pt(ev));
+});
+cv.addEventListener('pointermove', function (ev) { if (!dragging) return; ev.preventDefault(); rec(pt(ev)); });
+function finish(ev) {
+  if (!dragging) return;
+  dragging = false; ev.preventDefault();
+  rec(pt(ev));
+  if (dragPts.length) {
+    log('手势回放 ' + dragPts.length + ' 点');
+    post('api/gesture', { points: dragPts, durationMs: Date.now() - dragStart });
+  }
+}
+cv.addEventListener('pointerup', finish);
+cv.addEventListener('pointercancel', finish);
 cv.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
 document.getElementById('btn-wake').onclick = function () { post('api/action', { name: 'wake' }); };
 document.getElementById('btn-restart').onclick = function () { post('api/action', { name: 'restart' }); };
@@ -128,7 +149,7 @@ document.getElementById('btn-copy').onclick = function () {
 };
 function pollStatus() {
   fetch('api/status').then(function (r) { return r.json(); }).then(function (d) {
-    dEmu.textContent = d.emulator + ' · booted=' + d.booted + ' · gRPC ' + d.grpcPort;
+    dEmu.textContent = d.emulator + ' · booted=' + d.booted + ' · gRPC ' + d.grpcPort + ' · ' + (d.injection || '-');
   }).catch(function () {});
 }
 pollStatus(); setInterval(pollStatus, 5000);
