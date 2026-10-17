@@ -1,0 +1,8 @@
+node_modules
+dist/
+build/
+.temp_*/
+sign/
+*.log
+.DS_Store
+preview/shot-*.png

@@ -1,0 +1,46 @@
+{
+  "package": "com.bluebridge.review.weather",
+  "name": "天气一屏",
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "minAPILevel": 2,
+  "icon": "/common/weather/app-icon.png",
+  "deviceTypeList": [
+    "watch"
+  ],
+  "features": [
+    {
+      "name": "system.app"
+    },
+    {
+      "name": "system.router"
+    },
+    {
+      "name": "system.storage"
+    },
+    {
+      "name": "system.prompt"
+    },
+    {
+      "name": "system.vibrator"
+    },
+    {
+      "name": "system.device"
+    }
+  ],
+  "config": {
+    "logLevel": "warn",
+    "designWidth": 336
+  },
+  "display": {
+    "backgroundColor": "#0a1424"
+  },
+  "router": {
+    "entry": "pages/index",
+    "pages": {
+      "pages/index": {
+        "component": "index"
+      }
+    }
+  }
+}

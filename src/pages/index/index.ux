@@ -1,0 +1,465 @@
+<template>
+  <div class="page">
+    <image class="bg" src="/common/weather/bg-sky.png"></image>
+
+    <div class="content">
+      <!-- 顶部：地区 + 风向 -->
+      <div class="topbar">
+        <div class="city-wrap">
+          <image class="pin" src="/common/weather/m-location.png"></image>
+          <text class="city">北京 · 朝阳</text>
+        </div>
+        <text class="wind">东南风 2级</text>
+      </div>
+
+      <!-- 主视觉：温度 + 天气图标 -->
+      <div class="hero">
+        <div class="hero-left">
+          <div class="temp-row">
+            <text class="temp">23</text>
+            <text class="deg">°</text>
+          </div>
+          <div class="cond-row">
+            <text class="cond">多云</text>
+            <text class="cond-sub">体感 22°</text>
+          </div>
+        </div>
+        <image class="hero-icon" src="/common/weather/w-partly@2x.png"></image>
+      </div>
+
+      <!-- 三项指标 -->
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-head">
+            <image class="metric-icon" src="/common/weather/m-humidity.png"></image>
+            <text class="metric-label">湿度</text>
+          </div>
+          <div class="metric-line">
+            <text class="metric-value">62</text>
+            <text class="metric-unit">%</text>
+          </div>
+        </div>
+        <div class="metric">
+          <div class="metric-head">
+            <image class="metric-icon" src="/common/weather/m-aqi.png"></image>
+            <text class="metric-label">空气</text>
+          </div>
+          <div class="metric-line">
+            <text class="metric-value">42</text>
+            <text class="metric-unit unit-good">良</text>
+          </div>
+        </div>
+        <div class="metric">
+          <div class="metric-head">
+            <image class="metric-icon" src="/common/weather/m-uv.png"></image>
+            <text class="metric-label">紫外线</text>
+          </div>
+          <div class="metric-line">
+            <text class="metric-value">3</text>
+            <text class="metric-unit unit-uv">中等</text>
+          </div>
+        </div>
+      </div>
+
+      <!-- 未来 5 小时 -->
+      <div class="panel panel-hours">
+        <div class="panel-head">
+          <div class="bar"></div>
+          <text class="panel-title">未来 5 小时</text>
+          <text class="panel-sub">14:20 更新 · 多云转小雨</text>
+        </div>
+        <div class="hours">
+          <div class="hour" for="{{hours}}" tid="time">
+            <text class="hour-time">{{$item.time}}</text>
+            <image class="hour-icon" src="{{$item.icon}}"></image>
+            <text class="hour-temp">{{$item.temp}}°</text>
+          </div>
+        </div>
+      </div>
+
+      <!-- 未来 7 天 -->
+      <div class="panel panel-days">
+        <div class="panel-head">
+          <div class="bar"></div>
+          <text class="panel-title">未来 7 天</text>
+          <text class="panel-sub">周六有雨，随身带伞</text>
+        </div>
+        <div class="days">
+          <div class="day" for="{{days}}" tid="day">
+            <text class="day-name">{{$item.day}}</text>
+            <image class="day-icon" src="{{$item.icon}}"></image>
+            <text class="day-high">{{$item.high}}°</text>
+            <text class="day-low">{{$item.low}}°</text>
+          </div>
+        </div>
+      </div>
+
+      <!-- 日出日落 -->
+      <div class="sunrow">
+        <div class="sun-item">
+          <image class="sun-icon" src="/common/weather/m-sunrise.png"></image>
+          <text class="sun-label">日出</text>
+          <text class="sun-text">06:28</text>
+        </div>
+        <div class="sun-line"></div>
+        <div class="sun-item sun-item-right">
+          <text class="sun-text">17:26</text>
+          <text class="sun-label">日落</text>
+          <image class="sun-icon sun-icon-right" src="/common/weather/m-sunset.png"></image>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style>
+.page {
+  width: 336px;
+  height: 480px;
+  background-color: #0a1424;
+  position: relative;
+}
+
+.bg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 336px;
+  height: 480px;
+}
+
+.content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 336px;
+  height: 480px;
+  flex-direction: column;
+  padding: 16px 16px 12px 16px;
+}
+
+/* ---------- 顶部 ---------- */
+.topbar {
+  width: 304px;
+  height: 24px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+.city-wrap {
+  flex-direction: row;
+  align-items: center;
+}
+.pin {
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+}
+.city {
+  font-size: 22px;
+  line-height: 24px;
+  font-weight: bold;
+  color: #f1f5f9;
+}
+.wind {
+  font-size: 16px;
+  line-height: 20px;
+  color: #a8b6cc;
+}
+
+/* ---------- 主视觉 ---------- */
+.hero {
+  width: 304px;
+  height: 104px;
+  margin-top: 4px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.hero-left {
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.temp-row {
+  flex-direction: row;
+  align-items: flex-start;
+}
+.temp {
+  font-size: 80px;
+  line-height: 80px;
+  font-weight: bold;
+  color: #ffffff;
+}
+.deg {
+  font-size: 26px;
+  line-height: 26px;
+  font-weight: bold;
+  color: #fbbf24;
+  margin-top: 6px;
+  margin-left: 2px;
+}
+.cond-row {
+  flex-direction: row;
+  align-items: center;
+  height: 24px;
+}
+.cond {
+  font-size: 22px;
+  line-height: 24px;
+  font-weight: bold;
+  color: #fbbf24;
+  margin-right: 8px;
+}
+.cond-sub {
+  font-size: 13px;
+  line-height: 18px;
+  color: #8b9bb4;
+}
+.hero-icon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 2px;
+}
+
+/* ---------- 指标卡 ---------- */
+.metrics {
+  width: 304px;
+  height: 58px;
+  margin-top: 8px;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.metric {
+  width: 96px;
+  height: 58px;
+  background-color: rgba(255, 255, 255, 0.06);
+  border-width: 1px;
+  border-color: rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  padding: 6px 10px;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.metric-head {
+  flex-direction: row;
+  align-items: center;
+  height: 18px;
+}
+.metric-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+}
+.metric-label {
+  font-size: 14px;
+  line-height: 18px;
+  color: #8b9bb4;
+}
+.metric-line {
+  height: 30px;
+  flex-direction: row;
+  align-items: flex-end;
+}
+.metric-value {
+  font-size: 26px;
+  line-height: 30px;
+  font-weight: bold;
+  color: #f8fafc;
+}
+.metric-unit {
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: normal;
+  color: #a8b6cc;
+  margin-left: 3px;
+  margin-bottom: 3px;
+}
+.unit-good {
+  color: #86efac;
+}
+.unit-uv {
+  color: #fbbf24;
+}
+
+/* ---------- 面板 ---------- */
+.panel {
+  width: 304px;
+  background-color: rgba(255, 255, 255, 0.045);
+  border-width: 1px;
+  border-color: rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 6px 10px;
+  flex-direction: column;
+}
+.panel-hours {
+  margin-top: 8px;
+}
+.panel-days {
+  margin-top: 8px;
+}
+.panel-head {
+  flex-direction: row;
+  align-items: center;
+  height: 22px;
+}
+.bar {
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background-color: #fbbf24;
+  margin-right: 6px;
+}
+.panel-title {
+  font-size: 18px;
+  line-height: 22px;
+  font-weight: bold;
+  color: #dbe6f5;
+  margin-right: 8px;
+}
+.panel-sub {
+  font-size: 12px;
+  line-height: 16px;
+  color: #8b9bb4;
+}
+
+/* ---------- 5 小时 ---------- */
+.hours {
+  width: 282px;
+  height: 62px;
+  margin-top: 4px;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.hour {
+  width: 54px;
+  height: 62px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+.hour-time {
+  font-size: 15px;
+  line-height: 18px;
+  color: #9fb0c7;
+}
+.hour-icon {
+  width: 24px;
+  height: 24px;
+}
+.hour-temp {
+  font-size: 23px;
+  line-height: 26px;
+  font-weight: bold;
+  color: #f1f5f9;
+}
+
+/* ---------- 7 天 ---------- */
+.days {
+  width: 282px;
+  height: 64px;
+  margin-top: 4px;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.day {
+  width: 38px;
+  height: 64px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+.day-name {
+  font-size: 15px;
+  line-height: 18px;
+  color: #9fb0c7;
+}
+.day-icon {
+  width: 20px;
+  height: 20px;
+}
+.day-high {
+  font-size: 17px;
+  line-height: 20px;
+  font-weight: bold;
+  color: #f1f5f9;
+}
+.day-low {
+  font-size: 14px;
+  line-height: 16px;
+  color: #8b9bb4;
+}
+
+/* ---------- 日出日落 ---------- */
+.sunrow {
+  width: 304px;
+  height: 20px;
+  margin-top: 6px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.sun-item {
+  width: 104px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+}
+.sun-item-right {
+  justify-content: flex-end;
+}
+.sun-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+}
+.sun-icon-right {
+  margin-left: 4px;
+  margin-right: 0;
+}
+.sun-text {
+  flex-shrink: 0;
+}
+.sun-text {
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: bold;
+  color: #dbe6f5;
+  margin-left: 4px;
+}
+.sun-label {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: normal;
+  color: #8b9bb4;
+  margin-left: 4px;
+}
+.sun-line {
+  width: 88px;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+</style>
+
+<script>
+export default {
+  data: {
+    hours: [
+      { time: '现在', icon: '/common/weather/w-partly.png', temp: 23 },
+      { time: '15时', icon: '/common/weather/w-cloudy.png', temp: 22 },
+      { time: '16时', icon: '/common/weather/w-overcast.png', temp: 21 },
+      { time: '17时', icon: '/common/weather/w-rain.png', temp: 20 },
+      { time: '18时', icon: '/common/weather/w-rain.png', temp: 19 }
+    ],
+    days: [
+      { day: '今天', icon: '/common/weather/w-partly.png', high: 26, low: 17 },
+      { day: '周五', icon: '/common/weather/w-cloudy.png', high: 25, low: 16 },
+      { day: '周六', icon: '/common/weather/w-rain.png', high: 24, low: 15 },
+      { day: '周日', icon: '/common/weather/w-clear.png', high: 26, low: 17 },
+      { day: '周一', icon: '/common/weather/w-clear.png', high: 27, low: 18 },
+      { day: '周二', icon: '/common/weather/w-overcast.png', high: 25, low: 16 },
+      { day: '周三', icon: '/common/weather/w-rain.png', high: 24, low: 15 }
+    ]
+  },
+  onInit() {}
+}
+</script>

@@ -1,0 +1,16 @@
+{
+  "name": "vela-task1-weather",
+  "version": "1.0.0",
+  "private": true,
+  "description": "蓝桥工作室招新评测 · 题1 一屏天气（Vela 快应用 336×480）",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node scripts/run-jsc.cjs start",
+    "build": "node scripts/run-jsc.cjs build"
+  },
+  "devDependencies": {
+    "aiot-toolkit": "^2.0.5"
+  }
+}

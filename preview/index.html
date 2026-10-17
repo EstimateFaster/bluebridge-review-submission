@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><title>Vela 天气页预览 336×480</title><style>*{box-sizing:border-box;border-style:solid;border-width:0;margin:0;padding:0;}div{display:flex;flex-direction:row;align-items:flex-start;justify-content:flex-start;}html,body{margin:0;padding:0;background:#050a14;}body{font-family:"Noto Sans CJK SC","Noto Sans SC","DejaVu Sans",sans-serif;}img{display:block;}
+.page {
+  width: 336px;
+  height: 480px;
+  background-color: #0a1424;
+  position: relative;
+}
+
+.bg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 336px;
+  height: 480px;
+}
+
+.content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 336px;
+  height: 480px;
+  flex-direction: column;
+  padding: 16px 16px 12px 16px;
+}
+
+/* ---------- 顶部 ---------- */
+.topbar {
+  width: 304px;
+  height: 24px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+.city-wrap {
+  flex-direction: row;
+  align-items: center;
+}
+.pin {
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+}
+.city {
+  font-size: 22px;
+  line-height: 24px;
+  font-weight: bold;
+  color: #f1f5f9;
+}
+.wind {
+  font-size: 16px;
+  line-height: 20px;
+  color: #a8b6cc;
+}
+
+/* ---------- 主视觉 ---------- */
+.hero {
+  width: 304px;
+  height: 104px;
+  margin-top: 4px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.hero-left {
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.temp-row {
+  flex-direction: row;
+  align-items: flex-start;
+}
+.temp {
+  font-size: 80px;
+  line-height: 80px;
+  font-weight: bold;
+  color: #ffffff;
+}
+.deg {
+  font-size: 26px;
+  line-height: 26px;
+  font-weight: bold;
+  color: #fbbf24;
+  margin-top: 6px;
+  margin-left: 2px;
+}
+.cond-row {
+  flex-direction: row;
+  align-items: center;
+  height: 24px;
+}
+.cond {
+  font-size: 22px;
+  line-height: 24px;
+  font-weight: bold;
+  color: #fbbf24;
+  margin-right: 8px;
+}
+.cond-sub {
+  font-size: 13px;
+  line-height: 18px;
+  color: #8b9bb4;
+}
+.hero-icon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 2px;
+}
+
+/* ---------- 指标卡 ---------- */
+.metrics {
+  width: 304px;
+  height: 58px;
+  margin-top: 8px;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.metric {
+  width: 96px;
+  height: 58px;
+  background-color: rgba(255, 255, 255, 0.06);
+  border-width: 1px;
+  border-color: rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  padding: 6px 10px;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.metric-head {
+  flex-direction: row;
+  align-items: center;
+  height: 18px;
+}
+.metric-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+}
+.metric-label {
+  font-size: 14px;
+  line-height: 18px;
+  color: #8b9bb4;
+}
+.metric-line {
+  height: 30px;
+  flex-direction: row;
+  align-items: flex-end;
+}
+.metric-value {
+  font-size: 26px;
+  line-height: 30px;
+  font-weight: bold;
+  color: #f8fafc;
+}
+.metric-unit {
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: normal;
+  color: #a8b6cc;
+  margin-left: 3px;
+  margin-bottom: 3px;
+}
+.unit-good {
+  color: #86efac;
+}
+.unit-uv {
+  color: #fbbf24;
+}
+
+/* ---------- 面板 ---------- */
+.panel {
+  width: 304px;
+  background-color: rgba(255, 255, 255, 0.045);
+  border-width: 1px;
+  border-color: rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 6px 10px;
+  flex-direction: column;
+}
+.panel-hours {
+  margin-top: 8px;
+}
+.panel-days {
+  margin-top: 8px;
+}
+.panel-head {
+  flex-direction: row;
+  align-items: center;
+  height: 22px;
+}
+.bar {
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background-color: #fbbf24;
+  margin-right: 6px;
+}
+.panel-title {
+  font-size: 18px;
+  line-height: 22px;
+  font-weight: bold;
+  color: #dbe6f5;
+  margin-right: 8px;
+}
+.panel-sub {
+  font-size: 12px;
+  line-height: 16px;
+  color: #8b9bb4;
+}
+
+/* ---------- 5 小时 ---------- */
+.hours {
+  width: 282px;
+  height: 62px;
+  margin-top: 4px;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.hour {
+  width: 54px;
+  height: 62px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+.hour-time {
+  font-size: 15px;
+  line-height: 18px;
+  color: #9fb0c7;
+}
+.hour-icon {
+  width: 24px;
+  height: 24px;
+}
+.hour-temp {
+  font-size: 23px;
+  line-height: 26px;
+  font-weight: bold;
+  color: #f1f5f9;
+}
+
+/* ---------- 7 天 ---------- */
+.days {
+  width: 282px;
+  height: 64px;
+  margin-top: 4px;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.day {
+  width: 38px;
+  height: 64px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+.day-name {
+  font-size: 15px;
+  line-height: 18px;
+  color: #9fb0c7;
+}
+.day-icon {
+  width: 20px;
+  height: 20px;
+}
+.day-high {
+  font-size: 17px;
+  line-height: 20px;
+  font-weight: bold;
+  color: #f1f5f9;
+}
+.day-low {
+  font-size: 14px;
+  line-height: 16px;
+  color: #8b9bb4;
+}
+
+/* ---------- 日出日落 ---------- */
+.sunrow {
+  width: 304px;
+  height: 20px;
+  margin-top: 6px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.sun-item {
+  width: 104px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+}
+.sun-item-right {
+  justify-content: flex-end;
+}
+.sun-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+}
+.sun-icon-right {
+  margin-left: 4px;
+  margin-right: 0;
+}
+.sun-text {
+  flex-shrink: 0;
+}
+.sun-text {
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: bold;
+  color: #dbe6f5;
+  margin-left: 4px;
+}
+.sun-label {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: normal;
+  color: #8b9bb4;
+  margin-left: 4px;
+}
+.sun-line {
+  width: 88px;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+</style></head><body>
+  <div class="page">
+    <img class="bg" src="../src/common/weather/bg-sky.png">
+
+    <div class="content">
+      <!-- 顶部：地区 + 风向 -->
+      <div class="topbar">
+        <div class="city-wrap">
+          <img class="pin" src="../src/common/weather/m-location.png">
+          <div class="city">北京 · 朝阳</div>
+        </div>
+        <div class="wind">东南风 2级</div>
+      </div>
+
+      <!-- 主视觉：温度 + 天气图标 -->
+      <div class="hero">
+        <div class="hero-left">
+          <div class="temp-row">
+            <div class="temp">23</div>
+            <div class="deg">°</div>
+          </div>
+          <div class="cond-row">
+            <div class="cond">多云</div>
+            <div class="cond-sub">体感 22°</div>
+          </div>
+        </div>
+        <img class="hero-icon" src="../src/common/weather/w-partly@2x.png">
+      </div>
+
+      <!-- 三项指标 -->
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-head">
+            <img class="metric-icon" src="../src/common/weather/m-humidity.png">
+            <div class="metric-label">湿度</div>
+          </div>
+          <div class="metric-line">
+            <div class="metric-value">62</div>
+            <div class="metric-unit">%</div>
+          </div>
+        </div>
+        <div class="metric">
+          <div class="metric-head">
+            <img class="metric-icon" src="../src/common/weather/m-aqi.png">
+            <div class="metric-label">空气</div>
+          </div>
+          <div class="metric-line">
+            <div class="metric-value">42</div>
+            <div class="metric-unit unit-good">良</div>
+          </div>
+        </div>
+        <div class="metric">
+          <div class="metric-head">
+            <img class="metric-icon" src="../src/common/weather/m-uv.png">
+            <div class="metric-label">紫外线</div>
+          </div>
+          <div class="metric-line">
+            <div class="metric-value">3</div>
+            <div class="metric-unit unit-uv">中等</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 未来 5 小时 -->
+      <div class="panel panel-hours">
+        <div class="panel-head">
+          <div class="bar"></div>
+          <div class="panel-title">未来 5 小时</div>
+          <div class="panel-sub">14:20 更新 · 多云转小雨</div>
+        </div>
+        <div class="hours">
+          <div class="hour" >
+            <div class="hour-time">现在</div>
+            <img class="hour-icon" src="../src/common/weather/w-partly.png">
+            <div class="hour-temp">23°</div>
+          </div>
+<div class="hour" >
+            <div class="hour-time">15时</div>
+            <img class="hour-icon" src="../src/common/weather/w-cloudy.png">
+            <div class="hour-temp">22°</div>
+          </div>
+<div class="hour" >
+            <div class="hour-time">16时</div>
+            <img class="hour-icon" src="../src/common/weather/w-overcast.png">
+            <div class="hour-temp">21°</div>
+          </div>
+<div class="hour" >
+            <div class="hour-time">17时</div>
+            <img class="hour-icon" src="../src/common/weather/w-rain.png">
+            <div class="hour-temp">20°</div>
+          </div>
+<div class="hour" >
+            <div class="hour-time">18时</div>
+            <img class="hour-icon" src="../src/common/weather/w-rain.png">
+            <div class="hour-temp">19°</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 未来 7 天 -->
+      <div class="panel panel-days">
+        <div class="panel-head">
+          <div class="bar"></div>
+          <div class="panel-title">未来 7 天</div>
+          <div class="panel-sub">周六有雨，随身带伞</div>
+        </div>
+        <div class="days">
+          <div class="day" >
+            <div class="day-name">今天</div>
+            <img class="day-icon" src="../src/common/weather/w-partly.png">
+            <div class="day-high">26°</div>
+            <div class="day-low">17°</div>
+          </div>
+<div class="day" >
+            <div class="day-name">周五</div>
+            <img class="day-icon" src="../src/common/weather/w-cloudy.png">
+            <div class="day-high">25°</div>
+            <div class="day-low">16°</div>
+          </div>
+<div class="day" >
+            <div class="day-name">周六</div>
+            <img class="day-icon" src="../src/common/weather/w-rain.png">
+            <div class="day-high">24°</div>
+            <div class="day-low">15°</div>
+          </div>
+<div class="day" >
+            <div class="day-name">周日</div>
+            <img class="day-icon" src="../src/common/weather/w-clear.png">
+            <div class="day-high">26°</div>
+            <div class="day-low">17°</div>
+          </div>
+<div class="day" >
+            <div class="day-name">周一</div>
+            <img class="day-icon" src="../src/common/weather/w-clear.png">
+            <div class="day-high">27°</div>
+            <div class="day-low">18°</div>
+          </div>
+<div class="day" >
+            <div class="day-name">周二</div>
+            <img class="day-icon" src="../src/common/weather/w-overcast.png">
+            <div class="day-high">25°</div>
+            <div class="day-low">16°</div>
+          </div>
+<div class="day" >
+            <div class="day-name">周三</div>
+            <img class="day-icon" src="../src/common/weather/w-rain.png">
+            <div class="day-high">24°</div>
+            <div class="day-low">15°</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 日出日落 -->
+      <div class="sunrow">
+        <div class="sun-item">
+          <img class="sun-icon" src="../src/common/weather/m-sunrise.png">
+          <div class="sun-label">日出</div>
+          <div class="sun-text">06:28</div>
+        </div>
+        <div class="sun-line"></div>
+        <div class="sun-item sun-item-right">
+          <div class="sun-text">17:26</div>
+          <div class="sun-label">日落</div>
+          <img class="sun-icon sun-icon-right" src="../src/common/weather/m-sunset.png">
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>
