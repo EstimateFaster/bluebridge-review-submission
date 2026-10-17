@@ -2,7 +2,7 @@
 
 小米 Vela 手表（手环 10 Pro / 336 × 480）单页天气 rpk。全部天气数据为本地模拟值，**不发起任何网络请求**，单页 `.ux` 完成，构建产物可直接安装到 Vela 模拟器 / 真机。
 
-![主界面](screenshots/01-main-336x480@3x.png)
+![Vela 模拟器真实运行截图（336×480）](screenshots/emu-02-main@2x.png)
 
 ## 一、交付物
 
@@ -10,9 +10,11 @@
 |---|---|
 | 源码 | `src/`（单页 `src/pages/index/index.ux` + `manifest.json` + 自绘资产） |
 | 构建产物 | `vela-weather-336x480.debug.rpk`（`dist/` 下同名文件） |
-| 截图 | `screenshots/`（5 张：主界面 / 1x 实际像素 / 上半屏细节 / 下半屏细节 / 圆角屏模拟） |
+| 模拟器运行截图 | `screenshots/emu-*.png`（5 张：原始 336×480 / 2x / 上半屏细节 / 下半屏细节 / 圆角屏效果，均由官方 Vela 模拟器真实渲染后抓帧） |
+| 设计预览（辅助） | `screenshots/design-preview-*.png`（同源 HTML 渲染，用于快速迭代） |
 | 资产生成脚本 | `assets/gen_assets.py`（背景、天气图标、指标图标、应用图标全部本地生成） |
-| 预览渲染脚本 | `tools/render-preview.cjs` + `tools/screenshot.cjs`（用于无模拟器环境下做 336×480 视觉验证） |
+| 模拟器脚本 | `tools/emulator-run.cjs`（创建 VVD + 启动 + 安装 rpk）、`tools/emulator-shot.cjs`（gRPC 抓真实截图） |
+| 预览渲染脚本 | `tools/render-preview.cjs` + `tools/screenshot.cjs`（同源 HTML 渲染，快速迭代用） |
 | 调研笔记 | `docs/research/`（官方文档要点、336×480 UI 规范、决策记录） |
 
 ## 二、构建与运行
@@ -30,7 +32,13 @@ npm run build
 # 3. 运行
 #    - 方式 A：AIoT-IDE / Vela 开发者工具打开本目录 → 选模拟器/真机 → 调试
 #    - 方式 B：把 rpk 安装到设备（小米运动健康 App → 我的 → 关于 → Debug → 第三方应用）
+
+# 4. 无图形界面的 Linux 上直接跑官方 Vela 模拟器（本仓库验证方式）
+node tools/emulator-run.cjs      # 创建 VVD + 启动模拟器 + 安装并启动本应用（后台常驻）
+node tools/emulator-shot.cjs emu-01-main.png   # 任意时刻抓真实截图（gRPC，336×480）
 ```
+
+模拟器配置与日志证据见 [docs/emulator-verification.md](docs/emulator-verification.md)。
 
 - 设计基准：`manifest.json` 中 `config.designWidth = 336`，画布 336 × 480，设备类型 `watch`；
 - 包名：`com.bluebridge.review.weather`，版本 1.0.0；
@@ -41,9 +49,10 @@ npm run build
 - `npm run build` 通过（aiot-toolkit 2.0.5，Node v22.23.3，Linux x64），产物 149,829 字节；
 - 解包核对 rpk：包含 `manifest.json`、`pages/index/index.js`、21 个本地资产文件，无网络请求代码；
 - 336×480 布局预算校验：内容实际占用至 y=462（画布 480），无溢出、无滚动；
+- **官方 Vela 模拟器（VVD）实测**：`Boot completed in 5729 ms` → `pm install → onInstallResult: com.bluebridge.review.weather(success 0)` → `am start → AMS pushNewActivity ... [resumed]`；gRPC `getScreenshot` 返回 336×480 真实帧，见 `screenshots/emu-*.png`；
 - 9 项必含信息逐项核对见下表。
 
-> **截图说明（如实声明）**：开发机为无图形界面的 Linux 服务器，没有 AIoT-IDE / Vela 模拟器 / 真机。截图是用**与 `.ux` 同源的模板 + 同一套 CSS**（`tools/render-preview.cjs` 从 `index.ux` 解析生成 HTML，并按 Vela 的 flex 默认值补齐浏览器差异）在 336×480 下渲染的**设计预览图**，不是设备截图。rpk 已构建，建议评审在 AIoT-IDE 模拟器/真机上做最终确认；README 中所有布局数值均可在真机复现。
+> **截图说明**：开发机为无图形界面的 Linux 服务器，未安装 AIoT-IDE，但已通过**小米官方 Vela 模拟器 SDK**（`@aiot-toolkit/emulator` + `vela-watch-5.0` 镜像）以 `-no-window` + SwiftShader 方式启动 VVD，adb 安装 rpk 并抓取真实渲染帧（`tools/emulator-shot.cjs`）。`screenshots/emu-01-main.png` 为模拟器原始帧（336×480），其余为该帧的 2x/裁剪衍生素材；`screenshots/design-preview-*` 是同源 HTML 预览，仅用于迭代对比。
 
 ## 三、设计说明
 
@@ -144,6 +153,7 @@ npm run build
 3. **v2 重排**：按 UI 调研结论（designWidth=336 → 1px=1 物理像素；主温度 80+、正文 22+、辅助 14+）重构；指标减为 3 卡，风向移到顶栏，删除独立高低温行把空间让给主视觉；全部文字加显式 line-height，按 480px 预算重算高度。
 4. **v3 资产修复**：渲染发现主天气图标外圈有方形光晕 → 定位为 PNG 边缘 alpha 未归零 + RGBA 直接高斯模糊把透明区黑色混入；改为「alpha 阈值 + 只模糊 alpha 通道 + 渐变用 alpha 蒙版合成」，图标干净。
 5. **v4 结构加固**：指标值、日出日落改为「flex 行 + 独立 text」，不再依赖 `<span>` 的样式与 margin（Vela `text` 内嵌 span 的样式支持有限）；单位着色、对比度提升（三级文字 `#74839c`→`#8b9bb4`），重建并通过 336×480 溢出校验（内容底边 462）。
+6. **v5 模拟器实机验证**：下载官方 Vela 模拟器 SDK（emulator 0.1.0 + vela-watch-5.0 镜像）→ 修复 qemu 权限/依赖库/SwiftShader → 创建 336×480 VVD → adb 安装并启动 rpk → gRPC 抓取真实帧；真实渲染与设计预览高度一致，9 项信息全部可见；补齐 `tools/emulator-run.cjs`/`emulator-shot.cjs` 与验证记录。
 
 ## 八、目录结构
 
@@ -156,10 +166,12 @@ npm run build
 │   ├── app.ux
 │   ├── common/weather/              # 自绘资产（背景 / 天气图标 / 指标图标 / app icon）
 │   └── pages/index/index.ux         # 单页天气（template + style + script）
-├── screenshots/                     # 5 张设计预览图
+├── screenshots/                     # 模拟器真实截图（emu-*）+ 设计预览（design-preview-*）
 ├── assets/gen_assets.py             # 资产生成脚本
-├── tools/                           # 预览渲染 + 截图脚本
+├── tools/                           # 模拟器启动/抓帧 + 预览渲染脚本
 ├── docs/research/                   # 官方文档与 UI 调研笔记
+├── docs/emulator-verification.md    # 模拟器运行验证记录（日志/配置/复现步骤）
+├── docs/CHECKLIST.md                # 题面符合性逐条核对
 ├── preview/                         # 同源预览 HTML 与 3x 渲染图
 ├── scripts/run-jsc.cjs              # 构建入口（封装 aiot-toolkit）
 ├── package.json
@@ -168,6 +180,7 @@ npm run build
 
 ## 九、已知限制
 
-- 本机无 Vela 模拟器 / 真机，截图是**同源设计预览**而非设备截图（见上文声明）；
-- 浏览器与 Vela 渲染存在细微差异（如文字基线、行高取整），建议真机复核一次；
-- 调试签名使用 aiot-toolkit 内置证书，仅够模拟器/真机调试，不可用于正式发布。
+- 模拟器运行在无 GPU 的 Linux 上（SwiftShader 软件渲染；guest 为 ARM，走 QEMU TCG），**帧率/性能不代表真机**，但布局、字体、颜色与组件行为来自真实 Vela 运行时；
+- 使用 Vela 5.0 镜像（`vela-watch-5.0`），真机系统版本可能略有差异，建议评审在真机/ AIoT-IDE 复核一次；
+- 调试签名使用 aiot-toolkit 内置证书，仅够模拟器/真机调试，不可用于正式发布；
+- 模拟器 SDK（约 450MB）不随提交物分发，复现方式见 `docs/emulator-verification.md`。
